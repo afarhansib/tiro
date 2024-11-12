@@ -92,8 +92,9 @@
             <footer class="text-center mt-12 text-green-400/50 text-sm">
                 <p>created with <3 by <a href="https://afarhansib.github.io/"
                         class="hover:text-green-400">afarhansib</a></p>
-                <p>with the huge help from <a href="https://about.sourcegraph.com/cody" class="hover:text-green-400">cody</a></p>
-                <p class="mt-2">unlicensed - free to use</p>
+                <p>crafted in less than 4 hours with the incredible help of <a href="https://about.sourcegraph.com/cody" class="hover:text-green-400">cody</a></p>
+                <p class="mt-2"><a class="hover:text-green-400" href="https://github.com/afarhansib/tiro">contribute here</a> • logo created with <a class="hover:text-green-400" href="https://web.blockbench.net/?plugins=minecraft_title_generator">blockbench</a></p>
+                <p class="mt-2">unlicensed - free to use, modify, sell, claim, whatever</p>
             </footer>
         </main>
     </div>
