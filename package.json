@@ -1,0 +1,21 @@
+{
+  "name": "tiro",
+  "version": "1.0.0",
+  "description": "Minecraft Glyph Editor. Usually used as Title in Game, thus this is TItle geneRatOr.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "github.com/afarhansib/tiro"
+  },
+  "keywords": [
+    "minecraft",
+    "glyph",
+    "pixel",
+    "art"
+  ],
+  "author": "afarhansib",
+  "license": "UNLICENSED"
+}
