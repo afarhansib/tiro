@@ -1,14 +1,14 @@
 <template>
     <div class="min-h-screen bg-green-900 text-white lowercase">
         <header class="p-4 border-b border-green-800">
-            <div class="flex items-center justify-between">
-                <div class="flex flex-col items-start gap-3">
+            <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                <div class="flex flex-col items-center gap-3 w-full lg:w-auto">
                     <img src="/tiro-logo.png" alt="Tiro Logo" class="w-32" />
                     <p class="text-green-400">minecraft glyph editor</p>
                 </div>
 
-                <div class="flex items-center gap-4">
-                    <div class="flex gap-2 items-center">
+                <div class="flex flex-col lg:flex-row items-start lg:items-center gap-4 w-full lg:w-auto">
+                    <div class="flex gap-2 flex-wrap items-center">
                         <button @click="mode = 'replace'" :class="[
                             'px-4 py-2 rounded-lg transition-colors',
                             mode === 'replace'
@@ -43,7 +43,7 @@
 
 
 
-                <div class="relative flex flex-col gap-2">
+                <div class="relative flex flex-col gap-2 w-full lg:w-auto">
                     <label @drop.prevent="handleDrop" @dragover.prevent
                         class="border-2 border-dashed overflow-hidden relative border-green-800 p-8 rounded-lg hover:border-green-600 transition-colors cursor-pointer" :class="{ 'pb-4': filename }">
                         <div v-if="filename"
