@@ -45,7 +45,7 @@
 
                 <div class="relative flex flex-col gap-2">
                     <label @drop.prevent="handleDrop" @dragover.prevent
-                        class="border-2 border-dashed overflow-hidden relative border-green-800 p-8 rounded-lg hover:border-green-600 transition-colors cursor-pointer">
+                        class="border-2 border-dashed overflow-hidden relative border-green-800 p-8 rounded-lg hover:border-green-600 transition-colors cursor-pointer" :class="{ 'pb-4': filename }">
                         <div v-if="filename"
                             class="absolute pb-1 top-0 left-0 bg-green-800 px-2 py-0.5 text-xs rounded-br-lg
                         before:content-[''] before:absolute before:h-4 before:-bottom-4 before:left-0 before:w-4 before:rounded-tl-lg before:shadow-[0_-6px_0_0_rgb(22,101,52)] before:bg-transparent
