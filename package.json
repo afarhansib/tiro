@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "ncp dist/index.html dist/404.html && gh-pages -d dist"
+    "deploy": "npm run build && ncp dist/index.html dist/404.html && gh-pages -d dist"
   },
   "dependencies": {
     "vue": "^3.3.4",
