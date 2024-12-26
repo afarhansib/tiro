@@ -10,6 +10,7 @@
     "deploy": "npm run build && ncp dist/index.html dist/404.html && gh-pages -d dist"
   },
   "dependencies": {
+    "@panzoom/panzoom": "^4.5.1",
     "vue": "^3.3.4",
     "vue-router": "^4.2.4"
   },

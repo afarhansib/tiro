@@ -67,8 +67,8 @@
 
                 </div>
                 <!-- Decoration Controls Grid -->
-                <div class="overflow-x-auto">
-                    <div class="flex gap-4 w-fit mx-auto flex-nowrap">
+                <div class="overflow-x-auto border border-green-700 rounded-lg p-4 grid-bg">
+                    <div class="flex gap-4 w-fit mx-auto flex-nowrap" id="panzoom">
                         <!-- Left Decoration -->
                         <div class="space-y-2 flex flex-col flex-nowrap items-center">
                             <label class="text-green-400 whitespace-nowrap text-nowrap">Left Pattern</label>
@@ -259,13 +259,34 @@
                     <label class="text-green-400">Style Code</label>
                     <div class="flex gap-2">
                         <textarea v-model="styleCode"
-                            class="flex-1 h-24 bg-green-800 border border-green-700 rounded-lg px-4 py-2"></textarea>
+                            class="flex-1 bg-green-800 border border-green-700 rounded-lg px-4 py-2"></textarea>
                         <div class="flex flex-col gap-2 w-1/6">
                             <button @click="copyStyleCode" class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-500">
                                 Copy
                             </button>
                             <button @click="loadStyleCode" class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-500">
                                 Load
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-green-400">Style Encoder</label>
+                    <div class="flex gap-2">
+                        <textarea v-model="styleEncoder"
+                            class="flex-1 bg-green-800 border border-green-700 rounded-lg px-4 py-2"></textarea>
+                        <div class="flex flex-col gap-2 w-1/6">
+                            <button @click="styleEncoder = encodeStyle(parseToObject(styleEncoder))"
+                                class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-500">
+                                encode
+                            </button>
+                            <button @click="styleEncoder = JSON.stringify(decodeStyle(styleEncoder), null, 2)"
+                                class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-500">
+                                decode
+                            </button>
+                            <button @click="copyStyleEncoder" class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-500">
+                                Copy
                             </button>
                         </div>
                     </div>
@@ -291,12 +312,27 @@
     </Modal>
 </template>
 
+<style>
+.grid-bg {
+    /* Dark background */
+    background-image:
+        linear-gradient(to right, rgba(46, 139, 87, 0.1) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(46, 139, 87, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+    /* Grid size */
+}
+</style>
+
 <script setup>
 import { ref, watch, onMounted, compile, nextTick } from 'vue'
 import { fonts } from '../assets/fonts'
-import { styles as defaultStyles } from '../assets/styles'
+import { styles as encodedStyles } from '../assets/styles'
 import StyleGrid from './StyleGrid.vue'
 import Modal from './Modal.vue'
+
+import { encodeStyle, decodeStyle } from '../utils/style-encoder'
+
+import Panzoom from '@panzoom/panzoom'
 
 const showResetModal = ref(false)
 
@@ -305,7 +341,9 @@ const newStyleAuthor = ref('')
 const selectedStyle = ref(null)
 const styleCode = ref('')
 
-const styles = ref([...defaultStyles])
+const styleEncoder = ref('')
+
+const styles = ref(encodedStyles.map(encodedStyle => decodeStyle(encodedStyle)))
 
 const text = ref('crimson')
 const canvas = ref(null)
@@ -356,27 +394,17 @@ const originalRightDecoration = ref(null)
 // Add color constants
 const colors = ref([
     // Tiro default
-    '#4ade80', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155', '#1e293b', '#0f172a', // slate
-    '#d1d5db', '#9ca3af', '#6b7280', '#4b5563', '#374151', '#1f2937', '#111827', // gray
-    '#d4d4d8', '#a1a1aa', '#71717a', '#52525b', '#3f3f46', '#27272a', '#18181b', // zinc
-    '#d4d4d4', '#a3a3a3', '#737373', '#525252', '#404040', '#262626', '#171717', // neutral
-    '#d6d3d1', '#a8a29e', '#78716c', '#57534e', '#44403c', '#292524', '#1c1917', // stone
-    '#fca5a5', '#f87171', '#ef4444', '#dc2626', '#b91c1c', '#991b1b', '#7f1d1d', // red
-    '#fdba74', '#fb923c', '#f97316', '#ea580c', '#c2410c', '#9a3412', '#7c2d12', // orange
-    '#fcd34d', '#fbbf24', '#f59e0b', '#d97706', '#b45309', '#92400e', '#78350f', // amber
-    '#fde047', '#facc15', '#eab308', '#ca8a04', '#a16207', '#854d0e', '#713f12', // yellow
-    '#bef264', '#a3e635', '#84cc16', '#65a30d', '#4d7c0f', '#3f6212', '#365314', // lime
-    '#86efac', '#4ade80', '#22c55e', '#16a34a', '#15803d', '#166534', '#14532d', // green
-    '#5eead4', '#2dd4bf', '#14b8a6', '#0d9488', '#0f766e', '#115e59', '#134e4a', // teal
-    '#67e8f9', '#22d3ee', '#06b6d4', '#0891b2', '#0e7490', '#155e75', '#164e63', // cyan
-    '#7dd3fc', '#38bdf8', '#0ea5e9', '#0284c7', '#0369a1', '#075985', '#0c4a6e', // sky
-    '#93c5fd', '#60a5fa', '#3b82f6', '#2563eb', '#1d4ed8', '#1e40af', '#1e3a8a', // blue
-    '#a5b4fc', '#818cf8', '#6366f1', '#4f46e5', '#4338ca', '#3730a3', '#312e81', // indigo
-    '#c4b5fd', '#a78bfa', '#8b5cf6', '#7c3aed', '#6d28d9', '#5b21b6', '#4c1d95', // violet
-    '#d8b4fe', '#c084fc', '#a855f7', '#9333ea', '#7e22ce', '#6b21a8', '#581c87', // purple
-    '#f0abfc', '#e879f9', '#d946ef', '#c026d3', '#a21caf', '#86198f', '#701a75', // fuchsia
-    '#f9a8d4', '#f472b6', '#ec4899', '#db2777', '#be185d', '#9d174d', '#831843', // pink
-    '#fda4af', '#fb7185', '#f43f5e', '#e11d48', '#be123c', '#9f1239', '#881337'  // rose
+    // Basic Colors
+    '#4ade80', '#FFFFFF', '#808080', '#000000',  // Black, Gray, White
+
+    '#94a3b8', '#475569', '#1e293b', '#0f172a', // slate
+    '#d6d3d1', '#78716c', '#44403c', '#1c1917', // stone
+    '#fca5a5', '#ef4444', '#b91c1c', '#7f1d1d', // red
+    '#fde047', '#eab308', '#a16207', '#713f12', // yellow
+    '#86efac', '#22c55e', '#15803d', '#14532d', // green
+    '#93c5fd', '#3b82f6', '#1d4ed8', '#1e3a8a', // blue
+    '#d8b4fe', '#a855f7', '#7e22ce', '#581c87', // purple
+    '#f9a8d4', '#ec4899', '#be185d', '#831843', // pink
 ])
 
 const activeColor = ref(colors.value[0])
@@ -741,6 +769,13 @@ onMounted(() => {
     mirrorLeft.value = true
     mirrorRight.value = false
     generateGlyph()
+
+    const element = document.querySelector('#panzoom')
+    const panzoom = Panzoom(element, {
+        canvas: true
+    })
+    const parent = element.parentElement
+    parent.addEventListener('wheel', panzoom.zoomWithWheel)
 })
 
 // Add style functions
@@ -766,27 +801,7 @@ const saveStyle = (name, author) => {
     }
 
     styles.value.push(newStyle)
-
-    styleCode.value = `
-    {
-        id: '${newStyle.id}',
-        name: '${newStyle.name}',
-        author: '${newStyle.author}',
-        patterns: {
-            left: ${JSON.stringify(newStyle.patterns.left)},
-            middle: ${JSON.stringify(newStyle.patterns.middle)},
-            right: ${JSON.stringify(newStyle.patterns.right)}
-        },
-        settings: {
-            font: '${newStyle.settings.font}',
-            textColor: '${newStyle.settings.textColor}',
-            leftWidth: ${newStyle.settings.leftWidth},
-            middleWidth: ${newStyle.settings.middleWidth},
-            rightWidth: ${newStyle.settings.rightWidth},
-            mirrorLeft: ${newStyle.settings.mirrorLeft},
-            mirrorRight: ${newStyle.settings.mirrorRight}
-        }
-    }`
+    styleCode.value = encodeStyle(newStyle)
 }
 
 const extractColors = (patterns) => {
@@ -827,17 +842,24 @@ const copyStyleCode = async () => {
     await navigator.clipboard.writeText(styleCode.value)
 }
 
+const copyStyleEncoder = async () => {
+    await navigator.clipboard.writeText(styleEncoder.value)
+}
+
+const parseToObject = str => {
+    const jsonString = str
+        .replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":')
+        .replace(/'/g, '"')
+
+    const style = JSON.parse(jsonString)
+
+    return style
+}
+
 const loadStyleCode = async () => {
     const code = styleCode.value.trim()
     try {
-        // Convert JavaScript object literal to valid JSON by:
-        // 1. Adding quotes to property names
-        // 2. Converting single quotes to double quotes
-        const jsonString = code
-            .replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":')
-            .replace(/'/g, '"')
-
-        const style = JSON.parse(jsonString)
+        const style = decodeStyle(code)
         console.log(style)
 
         middleDecoration.value = style.patterns.middle
