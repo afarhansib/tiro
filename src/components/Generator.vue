@@ -65,13 +65,15 @@
                         </div>
                     </div>
 
-                    <!-- Decoration Controls Grid -->
-                    <div class="flex gap-4 w-fit mx-auto">
+                </div>
+                <!-- Decoration Controls Grid -->
+                <div class="overflow-x-auto">
+                    <div class="flex gap-4 w-fit mx-auto flex-nowrap">
                         <!-- Left Decoration -->
-                        <div class="space-y-2 flex flex-col items-center">
-                            <label class="text-green-400">Left Pattern</label>
+                        <div class="space-y-2 flex flex-col flex-nowrap items-center">
+                            <label class="text-green-400 whitespace-nowrap text-nowrap">Left Pattern</label>
                             <div class="flex flex-col lg:flex-row lg:items-center gap-2">
-                                <div class="flex items-center gap-2">
+                                <div class="flex items-center flex-nowrap gap-2">
                                     <!-- Left side controls -->
                                     <div class="flex flex-col items-center gap-2">
                                         <button
@@ -95,7 +97,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="bg-green-800 p-2 rounded w-fit">
+                            <div class="bg-green-800 p-2 rounded w-max">
                                 <div class="grid gap-1"
                                     :style="{ 'grid-template-columns': `repeat(${leftWidth}, minmax(0, 1fr))` }">
                                     <template v-for="y in 10" :key="y">
@@ -114,12 +116,12 @@
                                 <span class="ml-2 text-green-400">Mirror</span>
                             </label>
                             <!-- <button @click="rightDecoration = JSON.parse(JSON.stringify(leftDecoration)).map(row => [...row].reverse())"
-                                        class="px-3 py-1 bg-green-600 rounded-lg">mirror</button> -->
+                                    class="px-3 py-1 bg-green-600 rounded-lg">mirror</button> -->
                         </div>
 
                         <!-- Middle Pattern -->
                         <div class="space-y-2 flex flex-col items-center">
-                            <label class="text-green-400">Middle Pattern</label>
+                            <label class="text-green-400 text-nowrap whitespace-nowrap">Middle Pattern</label>
                             <div class="flex items-center gap-2">
                                 <div class="flex flex-col items-center gap-2">
                                     <button
@@ -142,7 +144,7 @@
                                         class="px-3 py-1 bg-green-600 rounded-lg">+</button>
                                 </div>
                             </div>
-                            <div class="bg-green-800 p-2 rounded w-fit">
+                            <div class="bg-green-800 p-2 rounded w-max">
                                 <div class="grid gap-1"
                                     :style="{ 'grid-template-columns': `repeat(${middleWidth}, minmax(0, 1fr))` }">
                                     <template v-for="y in 10" :key="y">
@@ -163,8 +165,8 @@
 
                         <!-- Right Decoration -->
                         <div class="space-y-2 flex flex-col items-center">
-                            <label class="text-green-400">Right Pattern</label>
-                            <div class="flex flex-col lg:flex-row lg:items-center gap-2">
+                            <label class="text-green-400 text-nowrap whitespace-nowrap">Right Pattern</label>
+                            <div class="flex flex-row flex-nowrap lg:items-center gap-2">
                                 <div class="flex flex-col items-center gap-2">
                                     <button @click="adjustDirection = 'left'; rightWidth = Math.max(-1, rightWidth - 1)"
                                         class="px-3 py-1 bg-green-600 rounded-lg">-</button>
@@ -185,7 +187,7 @@
                                         class="px-3 py-1 bg-green-600 rounded-lg">+</button>
                                 </div>
                             </div>
-                            <div class="bg-green-800 p-2 rounded w-fit">
+                            <div class="bg-green-800 p-2 rounded w-max">
                                 <div class="grid gap-1"
                                     :style="{ 'grid-template-columns': `repeat(${rightWidth}, minmax(0, 1fr))` }">
                                     <template v-for="y in 10" :key="y">
@@ -204,11 +206,10 @@
                                 <span class="ml-2 text-green-400">Mirror</span>
                             </label>
                             <!-- <button @click="leftDecoration = JSON.parse(JSON.stringify(rightDecoration)).map(row => [...row].reverse())"
-                                class="px-3 py-1 bg-green-600 rounded-lg">mirror</button> -->
+                            class="px-3 py-1 bg-green-600 rounded-lg">mirror</button> -->
                         </div>
                     </div>
                 </div>
-
                 <!-- Preview Canvas -->
                 <div class="space-y-2">
                     <label class="text-green-400">preview</label>
@@ -257,11 +258,16 @@
                 <div class="space-y-2">
                     <label class="text-green-400">Style Code</label>
                     <div class="flex gap-2">
-                        <textarea v-model="styleCode" readonly
+                        <textarea v-model="styleCode"
                             class="flex-1 h-24 bg-green-800 border border-green-700 rounded-lg px-4 py-2"></textarea>
-                        <button @click="copyStyleCode" class="w-1/6 px-4 py-2 bg-green-600 rounded-lg hover:bg-green-500">
-                            Copy
-                        </button>
+                        <div class="flex flex-col gap-2 w-1/6">
+                            <button @click="copyStyleCode" class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-500">
+                                Copy
+                            </button>
+                            <button @click="loadStyleCode" class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-500">
+                                Load
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -528,17 +534,17 @@ const downloadPreview = () => {
     const scale = 32
     const padding = 2 // 2 pixel padding
     const scaledPadding = padding * scale // Scale padding to match preview size
-    
+
     // Add padding to dimensions
     previewCanvas.width = (canvas.value.width + padding * 2) * scale
     previewCanvas.height = (canvas.value.height + padding * 2) * scale
 
     const ctx = previewCanvas.getContext('2d')
     ctx.imageSmoothingEnabled = false
-    
+
     // Fill with transparent background
     ctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height)
-    
+
     // Draw image with offset for padding
     ctx.drawImage(
         canvas.value,
@@ -819,5 +825,25 @@ const loadStyle = (style) => {
 
 const copyStyleCode = async () => {
     await navigator.clipboard.writeText(styleCode.value)
+}
+
+const loadStyleCode = async () => {
+    const code = styleCode.value.trim()
+    try {
+        // Convert JavaScript object literal to valid JSON by:
+        // 1. Adding quotes to property names
+        // 2. Converting single quotes to double quotes
+        const jsonString = code
+            .replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":')
+            .replace(/'/g, '"')
+
+        const style = JSON.parse(jsonString)
+        console.log(style)
+        loadStyle(style)
+        saveStyle(style.name, style.author)
+    } catch (error) {
+        console.error(error)
+        console.error('Invalid style code')
+    }
 }
 </script>
