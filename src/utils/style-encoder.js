@@ -66,7 +66,6 @@ export function decodeStyle(encoded) {
         
         const [leftWidth, middleWidth, rightWidth] = widthsStr.split(',').map(Number);
         const [mirrorLeft, mirrorRight] = mirrorsStr.split(',').map(v => v === '1');
-        console.log(mirrorsStr)
         
         const [leftPattern, middlePattern, rightPattern] = patternsStr.split(';');
 

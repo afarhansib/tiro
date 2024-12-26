@@ -64,7 +64,6 @@
                                 class="w-8 h-8 rounded bg-transparent border-0 cursor-pointer">
                         </div>
                     </div>
-
                 </div>
                 <!-- Decoration Controls Grid -->
                 <div class="overflow-x-auto border border-green-700 rounded-lg p-4 grid-bg">
@@ -260,7 +259,7 @@
                     <div class="flex gap-2">
                         <textarea v-model="styleCode"
                             class="flex-1 bg-green-800 border border-green-700 rounded-lg px-4 py-2"></textarea>
-                        <div class="flex flex-col gap-2 w-1/6">
+                        <div class="flex flex-col gap-2">
                             <button @click="copyStyleCode" class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-500">
                                 Copy
                             </button>
@@ -276,7 +275,7 @@
                     <div class="flex gap-2">
                         <textarea v-model="styleEncoder"
                             class="flex-1 bg-green-800 border border-green-700 rounded-lg px-4 py-2"></textarea>
-                        <div class="flex flex-col gap-2 w-1/6">
+                        <div class="flex flex-col gap-2">
                             <button @click="styleEncoder = encodeStyle(parseToObject(styleEncoder))"
                                 class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-500">
                                 encode
@@ -285,7 +284,8 @@
                                 class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-500">
                                 decode
                             </button>
-                            <button @click="copyStyleEncoder" class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-500">
+                            <button @click="copyStyleEncoder"
+                                class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-500">
                                 Copy
                             </button>
                         </div>
@@ -330,6 +330,31 @@ import { styles as encodedStyles } from '../assets/styles'
 import StyleGrid from './StyleGrid.vue'
 import Modal from './Modal.vue'
 
+const getDefaultText = () => {
+    const defaults = [
+        "VICTORIA",
+        "FUEGO",
+        "VAMOS",
+        "RAPIDO",
+        "FUERZA",
+        "EQUIPO",
+        "BATALLA",
+        "CAMPEON",
+        "GUERRERO",
+        "LEYENDA",
+        "PODER",
+        "GLORIA",
+        "LUCHA",
+        "AMIGO",
+        "VENGANZA",
+        "DESTINO",
+        "HONOR",
+        "VALIENTE"
+    ]
+    return defaults[Math.floor(Math.random() * defaults.length)]
+}
+
+
 import { encodeStyle, decodeStyle } from '../utils/style-encoder'
 
 import Panzoom from '@panzoom/panzoom'
@@ -345,7 +370,7 @@ const styleEncoder = ref('')
 
 const styles = ref(encodedStyles.map(encodedStyle => decodeStyle(encodedStyle)))
 
-const text = ref('crimson')
+const text = ref(getDefaultText())
 const canvas = ref(null)
 // Replace font selection code
 const fontNames = Object.keys(fonts)
@@ -384,7 +409,8 @@ const mirrorRight = ref(false)
 const adjustDirection = ref('right') // 'left' or 'right'
 
 // Add new ref for text color
-const textColor = ref('#4ade80')
+// const textColor = ref('#4ade80')
+const textColor = ref('gradient|to bottom|#ff8c00|#ff0080')
 const colorMode = ref('decoration')
 
 // Add state tracking for original decorations
@@ -496,6 +522,88 @@ const generateGlyph = () => {
         x += middleWidth.value
     }
 
+    let textGradient = null
+    if (textColor.value.startsWith('gradient')) {
+    // if (true) {
+        try {
+            // Parse gradient string
+            const [_, direction, ...colors] = textColor.value.split('|')
+            // const [_, direction, ...colors] = ('gradient|to bottom|#ff8c00|#ff0080').split('|')
+
+            // Create gradient for entire text area
+            let gradient
+            const textStartX = leftTotalWidth
+            const textEndX = leftTotalWidth + textWidth
+
+            switch (direction) {
+                case 'to right':
+                    gradient = ctx.createLinearGradient(textStartX, 0, textEndX, 0)
+                    console.log(gradient)
+                    break
+                case 'to left':
+                    gradient = ctx.createLinearGradient(textEndX, 0, textStartX, 0)
+                    break
+                case 'to bottom':
+                    gradient = ctx.createLinearGradient(textStartX, 0, textStartX, 10)
+                    break
+                case 'to top':
+                    gradient = ctx.createLinearGradient(textStartX, 10, textStartX, 0)
+                    break
+                case '45deg':
+                    gradient = ctx.createLinearGradient(textStartX, 0, textEndX, 10)
+                    break
+                case '-45deg':
+                    gradient = ctx.createLinearGradient(textEndX, 0, textStartX, 10)
+                    break
+
+                case 'diagonal-bottom-left':
+                    gradient = ctx.createLinearGradient(textEndX, 0, textStartX, 10)
+                    break
+
+                case 'diagonal-bottom-right':
+                    gradient = ctx.createLinearGradient(textStartX, 0, textEndX, 10)
+                    break
+
+                case 'radial':
+                    // Creates a radial gradient from center
+                    const centerX = textStartX + (textWidth / 2)
+                    const centerY = 5 // Assuming height is 10
+                    const radius = Math.max(textWidth, 10) / 2
+                    gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius)
+                    break
+
+                case 'diagonal-top-right':
+                    gradient = ctx.createLinearGradient(textStartX, 10, textEndX, 0)
+                    break
+
+                case 'diagonal-top-left':
+                    gradient = ctx.createLinearGradient(textEndX, 10, textStartX, 0)
+                    break
+
+                case '135deg':
+                    gradient = ctx.createLinearGradient(textStartX, 10, textEndX, 0)
+                    break
+
+                case '225deg':
+                    gradient = ctx.createLinearGradient(textEndX, 10, textStartX, 0)
+                    break
+                default:
+                    gradient = ctx.createLinearGradient(textStartX, 0, textEndX, 0)
+            }
+
+            // Add color stops
+            colors.forEach((color, index) => {
+                const offset = colors.length === 1 ? 0 : index / (colors.length - 1)
+                gradient.addColorStop(offset, color)
+            })
+
+            textGradient = gradient
+        } catch (error) {
+            console.error('Gradient error:', error)
+            textGradient = null
+        }
+    }
+
     // Draw text
     let currentX = leftTotalWidth
     chars.forEach((char, index) => {
@@ -506,7 +614,9 @@ const generateGlyph = () => {
         }
         const charData = font.characters.find(c => c.char === char)
         if (charData) {
-            ctx.fillStyle = textColor.value // Use text color
+            // Set fill style once for each character
+            ctx.fillStyle = textGradient || textColor.value
+
             charData.matrix.forEach((row, y) => {
                 row.forEach((pixel, x) => {
                     if (pixel) ctx.fillRect(currentX + x, y, 1, 1)
