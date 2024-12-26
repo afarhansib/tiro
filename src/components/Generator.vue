@@ -839,6 +839,10 @@ const loadStyleCode = async () => {
 
         const style = JSON.parse(jsonString)
         console.log(style)
+
+        middleDecoration.value = style.patterns.middle
+        leftDecoration.value = style.patterns.left
+        rightDecoration.value = style.patterns.right
         loadStyle(style)
         saveStyle(style.name, style.author)
     } catch (error) {
