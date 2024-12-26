@@ -49,6 +49,72 @@
                                 </button>
                             </div>
                         </div>
+
+                        <!-- Add gradient toggle -->
+                        <div class="flex gap-2 items-center">
+                            <label class="text-green-400 text-sm">Type:</label>
+                            <button @click="isGradient = false" class="px-2 py-1 rounded text-sm"
+                                :class="!isGradient ? 'bg-green-600' : 'bg-green-800'">
+                                Solid
+                            </button>
+                            <button @click="isGradient = true" class="px-2 py-1 rounded text-sm"
+                                :class="isGradient ? 'bg-green-600' : 'bg-green-800'">
+                                Gradient
+                            </button>
+                        </div>
+
+                        <!-- Gradient options (shown only when isGradient is true) -->
+                        <div v-if="isGradient" class="space-y-2">
+                            <div class="flex gap-2 items-center">
+                                <label class="text-green-400 text-sm">Direction:</label>
+                                <select v-model="gradientDirection"
+                                    class="bg-green-800 text-white rounded px-2 py-1 text-sm">
+                                    <option value="to right">To Right</option>
+                                    <option value="to left">To Left</option>
+                                    <option value="to bottom">To Bottom</option>
+                                    <option value="to top">To Top</option>
+                                    <option value="45deg">45°</option>
+                                    <option value="-45deg">-45°</option>
+                                    <option value="radial">Radial</option>
+                                </select>
+                            </div>
+
+                            <!-- Gradient color stops -->
+                            <div class="space-y-2 flex flex-row gap-4 h-full">
+                                <div class="flex flex-col gap-2">
+                                    <div v-for="(color, index) in gradientColors" :key="index"
+                                        class="flex gap-2 items-center">
+                                        <input type="color" v-model="gradientColors[index]"
+                                            class="w-8 h-8 rounded bg-transparent border-0 cursor-pointer">
+                                        <button @click="removeGradientColor(index)"
+                                            class="text-red-400 px-2 py-1 rounded text-sm"
+                                            v-if="gradientColors.length > 2">
+                                            Remove
+                                        </button>
+                                    </div>
+                                    <button @click="addGradientColor"
+                                        class="text-green-400 px-2 py-1 rounded text-sm border border-green-400"
+                                        v-if="gradientColors.length < 5">
+                                        Add Color Stop
+                                    </button>
+                                    <button @click="addGradientColorsToPalette"
+                                        class="text-green-400 px-2 py-1 rounded text-sm border border-green-400"
+                                        title="Add all colors from text to palette">
+                                        Add Text Colors to Palette
+                                    </button>
+                                </div>
+                                <div class="rounded-lg flex-1 h-full min-h-24" :style="{
+                                    background: `linear-gradient(${gradientDirection === 'to right' ? '90deg' :
+                                        gradientDirection === 'to left' ? '270deg' :
+                                            gradientDirection === 'to bottom' ? '180deg' :
+                                                gradientDirection === 'to top' ? '0deg' :
+                                                    gradientDirection
+                                        }, ${gradientColors.join(', ')})`
+                                }" />
+                            </div>
+                        </div>
+
+                        <!-- Original color picker (shown when isGradient is false) -->
                         <div class="flex gap-2 flex-wrap">
                             <button v-for="color in colors" :key="color"
                                 @click="colorMode === 'text' ? textColor = color : activeColor = color"
@@ -387,6 +453,34 @@ const leftWidth = ref(3)
 const middleWidth = ref(1)
 const rightWidth = ref(3)
 
+const isGradient = ref(false)
+const gradientDirection = ref('to bottom')
+const gradientColors = ref(['#ff8c00', '#ff0080'])
+
+const addGradientColor = () => {
+    if (gradientColors.value.length < 5) {
+        gradientColors.value.push('#000000')
+    }
+}
+
+const removeGradientColor = (index) => {
+    if (gradientColors.value.length > 2) {
+        gradientColors.value.splice(index, 1)
+    }
+}
+
+// Watch for gradient changes and update the color value
+watch([isGradient, gradientDirection, gradientColors], () => {
+    if (isGradient.value) {
+        const gradientString = `gradient/${gradientDirection.value}/${gradientColors.value.join('/')}`
+        if (colorMode.value === 'text') {
+            textColor.value = gradientString
+        } else {
+            activeColor.value = gradientString
+        }
+    }
+}, { deep: true })
+
 // Initialize decoration data with proper structure
 const initDecorationData = (width) => {
     return Array(10).fill().map(() =>
@@ -410,7 +504,7 @@ const adjustDirection = ref('right') // 'left' or 'right'
 
 // Add new ref for text color
 // const textColor = ref('#4ade80')
-const textColor = ref('gradient|to bottom|#ff8c00|#ff0080')
+const textColor = ref('gradient/to bottom/#ff8c00/#ff0080')
 const colorMode = ref('decoration')
 
 // Add state tracking for original decorations
@@ -439,7 +533,7 @@ const addCustomColor = (color) => {
     if (!colors.value.includes(color)) {
         colors.value.push(color)
     }
-    if (colorMode.value === 'text') {
+    if (colorMode.value === 'text' && !isGradient.value) {
         textColor.value = color
     } else {
         activeColor.value = color
@@ -449,6 +543,38 @@ const addCustomColor = (color) => {
 watch(textColor, () => {
     generateGlyph()
 })
+
+const addGradientColorsToPalette = () => {
+    if (!canvas.value) return
+
+    const ctx = canvas.value.getContext('2d')
+    const imageData = ctx.getImageData(0, 0, canvas.value.width, canvas.value.height).data
+    const uniqueColors = new Set()
+
+    // Scan every pixel in the canvas
+    for (let i = 0; i < imageData.length; i += 4) {
+        const r = imageData[i]
+        const g = imageData[i + 1]
+        const b = imageData[i + 2]
+        const a = imageData[i + 3]
+
+        // Only add fully opaque pixels (a === 255)
+        if (a === 255) {
+            const hex = rgbToHex(r, g, b)
+            uniqueColors.add(hex)
+        }
+    }
+
+    // Add all unique colors to the palette
+    uniqueColors.forEach(color => addCustomColor(color))
+}
+
+const rgbToHex = (r, g, b) => {
+    return '#' + [r, g, b].map(x => {
+        const hex = x.toString(16)
+        return hex.length === 1 ? '0' + hex : hex
+    }).join('')
+}
 
 const resetPatterns = () => {
     // Reset widths to defaults
@@ -524,10 +650,10 @@ const generateGlyph = () => {
 
     let textGradient = null
     if (textColor.value.startsWith('gradient')) {
-    // if (true) {
+        // if (true) {
         try {
             // Parse gradient string
-            const [_, direction, ...colors] = textColor.value.split('|')
+            const [_, direction, ...colors] = textColor.value.split('/')
             // const [_, direction, ...colors] = ('gradient|to bottom|#ff8c00|#ff0080').split('|')
 
             // Create gradient for entire text area
@@ -538,7 +664,6 @@ const generateGlyph = () => {
             switch (direction) {
                 case 'to right':
                     gradient = ctx.createLinearGradient(textStartX, 0, textEndX, 0)
-                    console.log(gradient)
                     break
                 case 'to left':
                     gradient = ctx.createLinearGradient(textEndX, 0, textStartX, 0)

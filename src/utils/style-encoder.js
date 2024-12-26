@@ -32,7 +32,7 @@ export function encodeStyle(data) {
             colors.join(','),  // Store color palette
             [patterns.left, patterns.middle, patterns.right].join(';'),
             data.settings.font,
-            data.settings.textColor.replace('#', ''),
+            data.settings.textColor,
             [data.settings.leftWidth, data.settings.middleWidth, data.settings.rightWidth].join(','),
             [Number(data.settings.mirrorLeft), Number(data.settings.mirrorRight)].join(',')
         ].join('|');
@@ -80,7 +80,7 @@ export function decodeStyle(encoded) {
             },
             settings: {
                 font,
-                textColor: '#' + textColor,
+                textColor: textColor,
                 leftWidth,
                 middleWidth,
                 rightWidth,
