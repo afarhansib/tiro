@@ -15,7 +15,7 @@
         <div v-else>
             <div class="grid grid-cols-2 gap-4">
                 <StylePreview v-for="style in styles" :key="style.id" :text="text" :style="style"
-                    :isSelected="selectedStyle === style.id" :livePreview="enableLivePreview"
+                    :isSelected="selectedStyle === style.id" :renderedPreview="stylePreviews[style.id]" :livePreview="enableLivePreview"
                     @select="$emit('select', style)" />
             </div>
 
@@ -47,7 +47,8 @@ const totalPreviews = ref(props.styles.length)
 const failedPreviews = ref(0)
 const enableLivePreview = ref(false)
 
-// Generate preview for a single style
+const stylePreviews = ref({})
+
 const generatePreview = async (style) => {
     try {
         const canvas = document.createElement('canvas')
@@ -57,9 +58,10 @@ const generatePreview = async (style) => {
         canvas.height = 40
         ctx.imageSmoothingEnabled = false
 
-        await drawGlyph(ctx, {
+        const graphResult = await drawGlyph({
             text: 'Yotbu',
-            font: fonts[style.settings.font],
+            id: style.id,
+            font: style.settings.font,
             textColor: style.settings.textColor,
             patterns: style.patterns,
             leftWidth: style.settings.leftWidth,
@@ -69,28 +71,43 @@ const generatePreview = async (style) => {
             mirrorRight: style.settings.mirrorRight
         })
 
-        style.preview = canvas.toDataURL()
+        // Store preview in separate object instead of modifying style
+        stylePreviews.value[style.id] = graphResult.svg
         completedPreviews.value++
         return true
     } catch (error) {
         console.error(`Preview generation failed for ${style.name}:`, error)
-        style.preview = null
+        stylePreviews.value[style.id] = null
         failedPreviews.value++
         return false
     }
 }
 
 const updatePreviews = async () => {
+    // console.log('Starting preview generation')
     isGeneratingPreviews.value = true
     completedPreviews.value = 0
     failedPreviews.value = 0
     totalPreviews.value = props.styles.length
+    // console.log('Total previews to generate:', totalPreviews.value)
 
     try {
+        // for (const style of props.styles) {
+        //     await generatePreview(style)
+        //     // Optional: add small delay between each preview
+        //     await new Promise(resolve => setTimeout(resolve, 100))
+        // }
+        // await Promise.all([
+        //     Promise.all(props.styles.map(generatePreview)),
+        //     new Promise(resolve => setTimeout(resolve, 1000))
+        // ])
         await Promise.all(props.styles.map(generatePreview))
     } catch (error) {
         console.error('Preview generation failed:', error)
     } finally {
+        // console.log('Finished generating previews')
+        // console.log('Completed:', completedPreviews.value)
+        // console.log('Failed:', failedPreviews.value)
         isGeneratingPreviews.value = false
     }
 }

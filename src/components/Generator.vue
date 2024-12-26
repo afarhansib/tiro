@@ -649,6 +649,8 @@ const generateGlyph = () => {
     }
 
     let textGradient = null
+    // console.log('textColor:', textColor.value)
+    // console.log(isGradient.value)
     if (textColor.value.startsWith('gradient')) {
         // if (true) {
         try {
@@ -681,14 +683,6 @@ const generateGlyph = () => {
                     gradient = ctx.createLinearGradient(textEndX, 0, textStartX, 10)
                     break
 
-                case 'diagonal-bottom-left':
-                    gradient = ctx.createLinearGradient(textEndX, 0, textStartX, 10)
-                    break
-
-                case 'diagonal-bottom-right':
-                    gradient = ctx.createLinearGradient(textStartX, 0, textEndX, 10)
-                    break
-
                 case 'radial':
                     // Creates a radial gradient from center
                     const centerX = textStartX + (textWidth / 2)
@@ -697,21 +691,6 @@ const generateGlyph = () => {
                     gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius)
                     break
 
-                case 'diagonal-top-right':
-                    gradient = ctx.createLinearGradient(textStartX, 10, textEndX, 0)
-                    break
-
-                case 'diagonal-top-left':
-                    gradient = ctx.createLinearGradient(textEndX, 10, textStartX, 0)
-                    break
-
-                case '135deg':
-                    gradient = ctx.createLinearGradient(textStartX, 10, textEndX, 0)
-                    break
-
-                case '225deg':
-                    gradient = ctx.createLinearGradient(textEndX, 10, textStartX, 0)
-                    break
                 default:
                     gradient = ctx.createLinearGradient(textStartX, 0, textEndX, 0)
             }
@@ -1055,12 +1034,26 @@ const loadStyle = (style) => {
     selectedStyle.value = style.id
 
     selectedFont.value = style.settings.font
-    textColor.value = style.settings.textColor
     leftWidth.value = style.settings.leftWidth
     middleWidth.value = style.settings.middleWidth
     rightWidth.value = style.settings.rightWidth
     mirrorLeft.value = style.settings.mirrorLeft
     mirrorRight.value = style.settings.mirrorRight
+
+    // Parse gradient if textColor is a gradient string
+    if (style.settings.textColor.startsWith('gradient')) {
+        const [_, direction, ...colors] = style.settings.textColor.split('/')
+        gradientDirection.value = direction
+        gradientColors.value = colors
+        textColor.value = style.settings.textColor
+    } else {
+        textColor.value = style.settings.textColor
+        isGradient.value = false
+        // Optionally reset gradient values to defaults
+        gradientDirection.value = 'to bottom'
+        gradientColors.value = ['#ff8c00', '#ff0080']
+    }
+
     colors.value = Array.from(new Set([...colors.value, ...extractColors(style.patterns), textColor.value]))
 
     nextTick(

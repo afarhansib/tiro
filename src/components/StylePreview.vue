@@ -29,12 +29,13 @@
 
         <!-- Preview Area -->
         <div class="relative flex-1 flex items-center justify-center">
-            <img v-if="!livePreview" :src="style.preview" class="w-full [image-rendering:pixelated]"
-                :class="{ 'opacity-50': !style.preview }" />
+            <!-- <img v-if="!livePreview" :src="style.preview" class="w-full [image-rendering:pixelated]"
+                :class="{ 'opacity-50': !style.preview }" /> -->
+            <div v-if="!livePreview" v-html="renderedPreview" class="w-full h-full"></div>
             <canvas v-else ref="canvas" class="w-full [image-rendering:pixelated]" />
 
             <!-- Error State -->
-            <div v-if="!style.preview && !livePreview" class="text-red-400 text-sm text-center">
+            <div v-if="!renderedPreview && !livePreview" class="text-red-400 text-sm text-center">
                 Preview failed
             </div>
         </div>
@@ -50,7 +51,8 @@ const props = defineProps({
     style: Object,
     isSelected: Boolean,
     livePreview: Boolean,
-    text: String
+    text: String,
+    renderedPreview: String
 })
 
 const emit = defineEmits(['select'])
