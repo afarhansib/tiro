@@ -14,8 +14,8 @@ export const drawGlyph = (options) => {
     const style = decodeStyle(encodedStyle)
     const normalize = str => str?.toLowerCase().replace(/[\s\-_]/g, '')
     const fontName = options.font || style.settings.font
-    // console.log(fontName)
     const font = Object.entries(fonts).find(([name]) => normalize(name) === normalize(fontName))?.[1]
+    // console.log(font)
 
     // Your existing options destructuring
     const {

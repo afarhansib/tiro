@@ -13,10 +13,11 @@
 
         <!-- Style Grid -->
         <div v-else>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <StylePreview v-for="style in styles" :key="style.id" :text="text" :style="style"
-                    :isSelected="selectedStyle === style.id" :renderedPreview="stylePreviews[style.id]" :livePreview="enableLivePreview"
-                    @select="$emit('select', style)" />
+                    :isSelected="selectedStyle === style.id" :renderedPreview="stylePreviews[style.id]"
+                    :livePreview="enableLivePreview" :maxWidth="maxDimensions.width" :maxHeight="maxDimensions.height"
+                    :styleDimensions="styleDimensions[style.id]" @select="$emit('select', style)" />
             </div>
 
             <!-- Live Preview Toggle -->
@@ -47,19 +48,16 @@ const totalPreviews = ref(props.styles.length)
 const failedPreviews = ref(0)
 const enableLivePreview = ref(false)
 
+const maxDimensions = ref({ width: 0, height: 0 })
+
+const styleDimensions = ref({})
+
 const stylePreviews = ref({})
 
 const generatePreview = async (style) => {
     try {
-        const canvas = document.createElement('canvas')
-        const ctx = canvas.getContext('2d')
-
-        canvas.width = 200
-        canvas.height = 40
-        ctx.imageSmoothingEnabled = false
-
         const graphResult = await drawGlyph({
-            text: 'Yotbu',
+            text: enableLivePreview.value ? props.text : 'Yotbu',
             id: style.id,
             font: style.settings.font,
             textColor: style.settings.textColor,
@@ -73,6 +71,14 @@ const generatePreview = async (style) => {
 
         // Store preview in separate object instead of modifying style
         stylePreviews.value[style.id] = graphResult.svg
+        // console.log('Generated preview for', style.name)
+        // console.log(graphResult.width, graphResult.height)
+
+        // Update current dimensions
+        styleDimensions.value[style.id] = {
+            width: graphResult.width,
+            height: graphResult.height
+        }
         completedPreviews.value++
         return true
     } catch (error) {
@@ -95,12 +101,51 @@ const updatePreviews = async () => {
         // for (const style of props.styles) {
         //     await generatePreview(style)
         //     // Optional: add small delay between each preview
-        //     await new Promise(resolve => setTimeout(resolve, 100))
+        //     await new Promise(resolve => setTimeout(resolve, 1000))
         // }
         // await Promise.all([
         //     Promise.all(props.styles.map(generatePreview)),
         //     new Promise(resolve => setTimeout(resolve, 1000))
         // ])
+        // First pass: measure all previews
+        // First pass: get dimensions from all previews
+        const measurements = await Promise.all(
+            props.styles.map(async (style) => {
+                const result = await drawGlyph({
+                    text: enableLivePreview.value ? props.text : 'Yotbu',
+                    id: style.id,
+                    font: style.settings.font,
+                    textColor: style.settings.textColor,
+                    patterns: style.patterns,
+                    leftWidth: style.settings.leftWidth,
+                    middleWidth: style.settings.middleWidth,
+                    rightWidth: style.settings.rightWidth,
+                    mirrorLeft: style.settings.mirrorLeft,
+                    mirrorRight: style.settings.mirrorRight
+                })
+
+                // console.log('Generated preview for', style.name)
+                // console.log(result.width, result.height)
+
+                return {
+                    width: result.width,
+                    height: result.height,
+                    svg: result.svg,
+                    style
+                }
+            })
+        )
+
+        // Find widest preview and use its dimensions
+        const widestMeasurement = measurements.reduce((widest, current) => {
+            return current.width > widest.width ? current : widest
+        })
+
+        maxDimensions.value = {
+            width: widestMeasurement.width,
+            height: widestMeasurement.height
+        }
+
         await Promise.all(props.styles.map(generatePreview))
     } catch (error) {
         console.error('Preview generation failed:', error)
@@ -116,8 +161,22 @@ onMounted(updatePreviews)
 
 // Add new watcher
 watch(enableLivePreview, async (enabled) => {
-    if (enabled) await updatePreviews()
+    await updatePreviews()
 })
+
+watch(() => props.text,
+    () => {
+        // console.log('Text changed:', props.text)
+        if (enableLivePreview.value) {
+            updatePreviews()
+        }
+    },
+    {
+        flush: 'post',     // wait until DOM updates complete
+        debounce: 300,     // debounce updates
+        maxWait: 1000      // maximum time to wait before forcing update
+    }
+)
 
 watch(() => props.styles, updatePreviews, { deep: true })
 </script>

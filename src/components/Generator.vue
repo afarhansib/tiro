@@ -295,11 +295,11 @@
                         generate glyph
                     </button> -->
                     <button @click="downloadGlyph" :disabled="!canDownload"
-                        class="px-4 py-2 bg-green-800 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        class="flex-1 px-4 py-2 bg-green-800 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                         download 1:1
                     </button>
                     <button @click="downloadPreview" :disabled="!canDownload"
-                        class="px-4 py-2 bg-green-800 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        class="flex-1 px-4 py-2 bg-green-800 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                         download preview
                     </button>
                 </div>
@@ -308,29 +308,29 @@
                     <label class="text-green-400">Styles</label>
                     <StyleGrid :text="text" :styles="styles" :selectedStyle="selectedStyle" @select="loadStyle" />
 
-                    <div class="flex flex-col md:flex-row w-full gap-2">
+                    <div class="flex flex-col md:flex-row w-full gap-2 pt-6">
                         <input v-model="newStyleName" placeholder="style name"
                             class="bg-green-800 border flex-1 border-green-700 rounded-lg px-4 py-2 placeholder-green-700">
                         <input v-model="newStyleAuthor" placeholder="author"
                             class="bg-green-800 border flex-1 border-green-700 rounded-lg px-4 py-2 placeholder-green-700">
                         <button @click="saveStyle(newStyleName, newStyleAuthor)"
-                            class="px-4 py-2 bg-green-600 rounded-lg">
-                            Save Style
+                            class="px-4 py-2 bg-green-600 rounded-lg w-full md:w-1/5">
+                            save style
                         </button>
                     </div>
                 </div>
 
                 <div class="space-y-2">
                     <label class="text-green-400">Style Code</label>
-                    <div class="flex gap-2">
+                    <div class="flex flex-col sm:flex-row gap-2">
                         <textarea v-model="styleCode"
                             class="flex-1 bg-green-800 border border-green-700 rounded-lg px-4 py-2"></textarea>
-                        <div class="flex flex-col gap-2">
-                            <button @click="copyStyleCode" class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-500">
-                                Copy
+                        <div class="flex flex-row sm:flex-col w-full sm:w-1/5 gap-2">
+                            <button @click="copyStyleCode" class="px-4 py-2 flex-1 bg-green-600 rounded-lg hover:bg-green-500">
+                                copy
                             </button>
-                            <button @click="loadStyleCode" class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-500">
-                                Load
+                            <button @click="loadStyleCode" class="px-4 py-2 flex-1 bg-green-600 rounded-lg hover:bg-green-500">
+                                load
                             </button>
                         </div>
                     </div>
@@ -338,20 +338,20 @@
 
                 <div class="space-y-2">
                     <label class="text-green-400">Style Encoder</label>
-                    <div class="flex gap-2">
+                    <div class="flex  flex-col sm:flex-row  gap-2">
                         <textarea v-model="styleEncoder"
                             class="flex-1 bg-green-800 border border-green-700 rounded-lg px-4 py-2"></textarea>
-                        <div class="flex flex-col gap-2">
+                        <div class="flex flex-row sm:flex-col gap-2 w-full sm:w-1/5">
                             <button @click="styleEncoder = encodeStyle(parseToObject(styleEncoder))"
-                                class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-500">
+                                class="flex-1 px-4 py-2 bg-green-600 rounded-lg hover:bg-green-500">
                                 encode
                             </button>
                             <button @click="styleEncoder = JSON.stringify(decodeStyle(styleEncoder), null, 2)"
-                                class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-500">
+                                class="flex-1 px-4 py-2 bg-green-600 rounded-lg hover:bg-green-500">
                                 decode
                             </button>
                             <button @click="copyStyleEncoder"
-                                class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-500">
+                                class="flex-1 px-4 py-2 bg-green-600 rounded-lg hover:bg-green-500">
                                 Copy
                             </button>
                         </div>
