@@ -109,6 +109,9 @@ const updatePreviews = async () => {
         // ])
         // First pass: measure all previews
         // First pass: get dimensions from all previews
+        // if (styles.length === 0) {
+        //     return
+        // }
         const measurements = await Promise.all(
             props.styles.map(async (style) => {
                 const result = await drawGlyph({

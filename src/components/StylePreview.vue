@@ -24,8 +24,26 @@
         }" @click="$emit('select', style.id)">
         <!-- Header -->
         <div class="flex justify-between mb-4">
-            <div class="text-green-400">{{ style.name }} <span class="text-green-600 text-xs">({{ styleDimensions.width
-                    }}x{{ styleDimensions.height }})</span></div>
+            <div class="text-green-400 flex items-center gap-2">
+                {{ style.name }}
+                <span class="text-green-600 text-xs">
+                    ({{ styleDimensions.width }}x{{ styleDimensions.height }})
+                </span>
+                <span>
+                    <div v-if="!style.verified" class="px-2 py-0.5 rounded-md text-xs font-medium
+                bg-gradient-to-r from-yellow-900/50 to-red-900/30
+                text-yellow-500 border border-yellow-700/20
+                flex items-center gap-1.5 shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 animate-pulse" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        unverified
+                    </div>
+                </span>
+            </div>
+            <!-- <div v-if="!style.verified">unverified</div> -->
             <div class="text-green-600 text-sm">{{ style.author }}</div>
         </div>
 

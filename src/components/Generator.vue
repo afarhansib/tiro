@@ -409,6 +409,19 @@
                         </button>
                     </div>
                 </div>
+                <button v-if="styleCode" @click="submitStyle" class="px-4 py-3 bg-yellow-600 hover:bg-yellow-500 rounded-lg w-full 
+       transform hover:scale-105 transition-all duration-200 
+       border-2 border-yellow-400/30 
+       flex items-center justify-center gap-2 
+       animate-pulse hover:animate-none
+       shadow-lg hover:shadow-yellow-600/50">
+                    <span class="text-lg font-medium">share your masterpiece!</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 animate-bounce" fill="none"
+                        viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                    </svg>
+                </button>
 
                 <div class="space-y-2">
                     <label class="text-green-400">Style Code</label>
@@ -468,6 +481,31 @@
             </div>
         </div>
     </Modal>
+
+    <!-- Confirmation Modal -->
+    <!-- Use your existing Modal component -->
+    <Modal :show="showSubmitModal" @close="showSubmitModal = false">
+        <div class="space-y-4">
+            <div class="text-green-400 font-medium">Submit Style</div>
+            <div class="text-green-500">
+                by submitting this style, you agree to:
+                <ul class="list-disc pl-5 mt-2 space-y-1">
+                    <li>share your style publicly</li>
+                    <li>respect community guidelines</li>
+                </ul>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button @click="showSubmitModal = false"
+                    class="px-4 py-2 text-green-400 hover:bg-green-800/50 rounded-lg">
+                    cancel
+                </button>
+                <button @click="confirmSubmit" :disabled="isSubmitting"
+                    class="px-4 py-2 bg-yellow-600 text-white hover:bg-yellow-500 rounded-lg">
+                    {{ isSubmitting ? 'Submitting...' : 'confirm submit' }}
+                </button>
+            </div>
+        </div>
+    </Modal>
 </template>
 
 <style>
@@ -487,7 +525,38 @@ import { fonts } from '../assets/fonts'
 import { styles as encodedStyles } from '../assets/styles'
 import StyleGrid from './StyleGrid.vue'
 import Modal from './Modal.vue'
+import { useToast } from '../composables/useToast'
 
+const showSubmitModal = ref(false)
+const isSubmitting = ref(false)
+
+const submitStyle = async () => {
+    showSubmitModal.value = true  // This opens the modal
+}
+
+const toast = useToast()
+
+const confirmSubmit = async () => {
+    try {
+        isSubmitting.value = true
+        let verifyStyle
+        try {
+            verifyStyle = decodeStyle(styleCode.value)
+        } catch (error) {
+            throw new Error('invalid style code.')
+        }
+        await submitStyleToServer(styleCode.value)
+        showSubmitModal.value = false
+        // Optional: Show success message or refresh styles
+        toast.success('style submitted successfully! ✨')
+    } catch (error) {
+        console.error('error submitting style:', error)
+        showSubmitModal.value = false
+        toast.error('failed to share style. ' + error.message)
+    } finally {
+        isSubmitting.value = false
+    }
+}
 const getDefaultText = () => {
     const defaults = [
         "VICTORIA",
@@ -527,6 +596,8 @@ const styleCode = ref('')
 const styleEncoder = ref('')
 
 const styles = ref(encodedStyles.map(encodedStyle => decodeStyle(encodedStyle)))
+// console.log(styles.value)
+// const styles = ref([])
 
 const text = ref(getDefaultText())
 const canvas = ref(null)
@@ -1153,6 +1224,8 @@ onMounted(() => {
     })
     const parent = element.parentElement
     parent.addEventListener('wheel', panzoom.zoomWithWheel)
+
+    fetchStyles()
 })
 
 // Add style functions
@@ -1292,4 +1365,55 @@ watch(isMatrixMode, (newValue, oldValue) => {
     }
     generateGlyph()
 })
+
+// Add these functions to your component
+const apiUrl = 'http://localhost:3130/styles.php'  // Update with your actual URL
+
+// Check if decodeStyle is working correctly
+// Add API styles
+const fetchStyles = async () => {
+    try {
+        const response = await fetch(apiUrl)
+        const data = await response.json()
+        if (data.styles) {
+            console.log(data.styles)
+            // Get set of existing IDs
+            const existingIds = new Set(styles.value.map(style => style.id))
+
+            // Filter and decode new unique styles
+            const apiStyles = data.styles
+                .map(style => decodeStyle(style))
+                .filter(style => !existingIds.has(style.id))
+
+            // Append only unique styles
+            if (apiStyles.length > 0) {
+                styles.value = [...styles.value, ...apiStyles]
+            }
+        }
+    } catch (error) {
+        console.error('Error fetching styles:', error)
+    }
+}
+
+// Function to save style to API
+const submitStyleToServer = async (styleString) => {
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'text/plain',
+            },
+            body: styleString
+        })
+        const data = await response.json()
+        if (data.success) {
+            // Refresh styles after successful save
+            await fetchStyles()
+        }
+    } catch (error) {
+        console.error('Error saving style:', error)
+        // You might want to add error handling UI here
+    }
+}
+
 </script>
