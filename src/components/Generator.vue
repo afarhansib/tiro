@@ -1367,7 +1367,7 @@ watch(isMatrixMode, (newValue, oldValue) => {
 })
 
 // Add these functions to your component
-const apiUrl = 'http://localhost:3130/styles.php'  // Update with your actual URL
+const apiUrl = 'https://tiro.yotbu.my.id/styles.php'  // Update with your actual URL
 
 // Check if decodeStyle is working correctly
 // Add API styles
