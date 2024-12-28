@@ -1,9 +1,16 @@
 <template>
     <div class="min-h-screen bg-green-900 text-white lowercase p-4">
         <div class="max-w-4xl mx-auto pt-6">
+            <div class="flex items-center gap-2 mb-4">
+                <label class="text-green-400">Matrix Mode</label>
+                <button @click="isMatrixMode = !isMatrixMode" class="px-3 py-1 rounded-lg border border-green-700"
+                    :class="isMatrixMode ? 'bg-green-600' : 'bg-green-900'">
+                    {{ isMatrixMode ? 'ON' : 'OFF' }}
+                </button>
+            </div>
             <div class="space-y-6">
                 <!-- Text Input -->
-                <div class="space-y-2">
+                <div class="space-y-2" v-if="!isMatrixMode">
                     <label class="text-green-400">text</label>
                     <input v-model="text" type="text"
                         class="w-full bg-green-800 border border-green-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-600"
@@ -11,7 +18,7 @@
                 </div>
 
                 <!-- Customization Options -->
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4" v-if="!isMatrixMode">
                     <div class="space-y-2">
                         <label class="text-green-400">font family</label>
                         <select v-model="selectedFont"
@@ -131,150 +138,233 @@
                         </div>
                     </div>
                 </div>
-                <!-- Decoration Controls Grid -->
-                <div class="overflow-x-auto border border-green-700 rounded-lg p-4 grid-bg">
-                    <div class="flex gap-4 w-fit mx-auto flex-nowrap" id="panzoom">
-                        <!-- Left Decoration -->
-                        <div class="space-y-2 flex flex-col flex-nowrap items-center">
-                            <label class="text-green-400 whitespace-nowrap text-nowrap">Left Pattern</label>
-                            <div class="flex flex-col lg:flex-row lg:items-center gap-2">
-                                <div class="flex items-center flex-nowrap gap-2">
-                                    <!-- Left side controls -->
+                <div class="relative">
+                    <!-- Decoration Controls Grid -->
+                    <div
+                        class="overflow-x-auto border border-green-700 rounded-lg p-4 grid-bg relative z-20 bg-green-900">
+                        <div class="flex gap-4 w-fit mx-auto flex-nowrap" id="panzoom">
+                            <!-- Left Decoration -->
+                            <div class="space-y-2 flex flex-col flex-nowrap items-center">
+                                <label class="text-green-400 whitespace-nowrap text-nowrap">
+                                    {{ isMatrixMode ? '' : 'Left' }}
+                                </label>
+                                <div class="flex flex-col lg:flex-row lg:items-center gap-2"
+                                    v-if="gridStyles.showControls">
+                                    <div class="flex items-center flex-nowrap gap-2">
+                                        <!-- Left side controls -->
+                                        <div class="flex flex-col items-center gap-2">
+                                            <button
+                                                @click="adjustDirection = 'left'; leftWidth = Math.max(-1, leftWidth - 1)"
+                                                class="px-3 py-1 bg-green-600 rounded-lg">-</button>
+                                            <button
+                                                @click="adjustDirection = 'left'; leftWidth = Math.min(100, leftWidth + 1)"
+                                                class="px-3 py-1 bg-green-600 rounded-lg">+</button>
+                                        </div>
+                                        <p class="px-1">{{ leftWidth }}</p>
+                                        <!-- Right side controls -->
+                                        <div class="flex flex-col items-center gap-2">
+                                            <button
+                                                @click="adjustDirection = 'right'; leftWidth = Math.max(-1, leftWidth - 1)"
+                                                class="px-3 py-1 bg-green-600 rounded-lg">-</button>
+                                            <button
+                                                @click="adjustDirection = 'right'; leftWidth = Math.min(100, leftWidth + 1)"
+                                                class="px-3 py-1 bg-green-600 rounded-lg">+</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex flex-row items-center gap-2">
+                                    <!-- Height controls - only show in matrix mode -->
+                                    <div v-if="isMatrixMode" class="absolute right-full pr-2 flex items-center">
+                                        <div class="flex items-center flex-nowrap gap-2 flex-col"
+                                            v-if="gridStyles.showControls">
+                                            <!-- Top side controls -->
+                                            <div class="flex flex-row items-center gap-2">
+                                                <button
+                                                    @click="adjustHeightDirection = 'top'; canvasHeight = Math.max(1, canvasHeight - 1)"
+                                                    class="px-3 py-1 bg-green-600 rounded-lg">-</button>
+                                                <button
+                                                    @click="adjustHeightDirection = 'top'; canvasHeight = Math.min(100, canvasHeight + 1)"
+                                                    class="px-3 py-1 bg-green-600 rounded-lg">+</button>
+                                            </div>
+                                            <p>{{ canvasHeight }}</p>
+                                            <!-- Bottom side controls -->
+                                            <div class="flex flex-row items-center gap-2">
+                                                <button
+                                                    @click="adjustHeightDirection = 'bottom'; canvasHeight = Math.max(1, canvasHeight - 1)"
+                                                    class="px-3 py-1 bg-green-600 rounded-lg">-</button>
+                                                <button
+                                                    @click="adjustHeightDirection = 'bottom'; canvasHeight = Math.min(100, canvasHeight + 1)"
+                                                    class="px-3 py-1 bg-green-600 rounded-lg">+</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="bg-green-800 p-2 rounded w-max">
+                                            <div class="grid gap-1" :style="{
+                                                'grid-template-columns': `repeat(${leftWidth}, minmax(0, 1fr))`,
+                                                'grid-template-rows': isMatrixMode ? `repeat(${canvasHeight}, minmax(0, 1fr))` : 'repeat(10, minmax(0, 1fr))',
+                                                gap: `${gridStyles.cellGap}px`
+                                            }">
+                                                <template v-for="y in (isMatrixMode ? canvasHeight : 10)" :key="y">
+                                                    <button v-for="x in leftWidth" :key="`${x}-${y}`"
+                                                        @click="togglePixel('left', x - 1, y - 1)"
+                                                        class="w-6 h-6 transition-colors" :class="{
+                                                            'border border-green-700': gridStyles.showBorders,
+                                                            'rounded': gridStyles.roundedCells,
+                                                            'bg-green-900': !leftDecoration[y - 1]?.[x - 1]?.active
+                                                        }" :style="{
+                                                            backgroundColor: leftDecoration[y - 1]?.[x - 1]?.active ?
+                                                                leftDecoration[y - 1][x - 1].color : '',
+                                                            margin: `${gridStyles.cellGap}px`
+                                                        }" />
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <label class="inline-flex items-center" v-if="!isMatrixMode && gridStyles.showControls">
+                                    <input type="checkbox" v-model="mirrorLeft"
+                                        class="form-checkbox bg-green-800 border-green-700">
+                                    <span class="ml-2 text-green-400">Mirror</span>
+                                </label>
+                                <!-- <button @click="rightDecoration = JSON.parse(JSON.stringify(leftDecoration)).map(row => [...row].reverse())"
+                                        class="px-3 py-1 bg-green-600 rounded-lg">mirror</button> -->
+                            </div>
+                            <!-- Middle Pattern -->
+                            <div class="space-y-2 flex flex-col items-center" v-if="!isMatrixMode">
+                                <label class="text-green-400 text-nowrap whitespace-nowrap">Middle</label>
+                                <div class="flex items-center gap-2" v-if="gridStyles.showControls">
                                     <div class="flex flex-col items-center gap-2">
                                         <button
-                                            @click="adjustDirection = 'left'; leftWidth = Math.max(-1, leftWidth - 1)"
+                                            @click="adjustDirection = 'left'; middleWidth = Math.max(0, middleWidth - 1)"
                                             class="px-3 py-1 bg-green-600 rounded-lg">-</button>
                                         <button
-                                            @click="adjustDirection = 'left'; leftWidth = Math.min(100, leftWidth + 1)"
+                                            @click="adjustDirection = 'left'; middleWidth = Math.min(100, middleWidth + 1)"
                                             class="px-3 py-1 bg-green-600 rounded-lg">+</button>
                                     </div>
-
-                                    <p class="px-4">{{ leftWidth }}</p>
-
+                                    <p class="px-1">{{ middleWidth }}</p>
                                     <!-- Right side controls -->
                                     <div class="flex flex-col items-center gap-2">
                                         <button
-                                            @click="adjustDirection = 'right'; leftWidth = Math.max(-1, leftWidth - 1)"
+                                            @click="adjustDirection = 'right'; middleWidth = Math.max(0, middleWidth - 1)"
                                             class="px-3 py-1 bg-green-600 rounded-lg">-</button>
                                         <button
-                                            @click="adjustDirection = 'right'; leftWidth = Math.min(100, leftWidth + 1)"
+                                            @click="adjustDirection = 'right'; middleWidth = Math.min(100, middleWidth + 1)"
                                             class="px-3 py-1 bg-green-600 rounded-lg">+</button>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="bg-green-800 p-2 rounded w-max">
-                                <div class="grid gap-1"
-                                    :style="{ 'grid-template-columns': `repeat(${leftWidth}, minmax(0, 1fr))` }">
-                                    <template v-for="y in 10" :key="y">
-                                        <button v-for="x in leftWidth" :key="`${x}-${y}`"
-                                            @click="togglePixel('left', x - 1, y - 1)"
-                                            class="w-6 h-6 border border-green-700 rounded transition-colors"
-                                            :class="leftDecoration[y - 1]?.[x - 1]?.active ? '' : 'bg-green-900'"
-                                            :style="leftDecoration[y - 1]?.[x - 1]?.active ?
-                                                { backgroundColor: leftDecoration[y - 1][x - 1].color } : {}" />
-                                    </template>
+                                <div class="bg-green-800 p-2 rounded w-max">
+                                    <div class="grid gap-1" :style="{
+                                        'grid-template-columns': `repeat(${middleWidth}, minmax(0, 1fr))`,
+                                        gap: `${gridStyles.cellGap}px`
+                                    }">
+                                        <template v-for="y in 10" :key="y">
+                                            <button v-for="x in middleWidth" :key="`${x}-${y}`"
+                                                @click="togglePixel('middle', x - 1, y - 1)"
+                                                class="w-6 h-6 transition-colors" :class="{
+                                                    'border border-green-700': gridStyles.showBorders,
+                                                    'rounded': gridStyles.roundedCells,
+                                                    'bg-green-900': !middleDecoration[y - 1]?.[x - 1]?.active
+                                                }" :style="{
+                                                    backgroundColor: middleDecoration[y - 1]?.[x - 1]?.active ?
+                                                        middleDecoration[y - 1][x - 1].color : '',
+                                                    margin: `${gridStyles.cellGap}px`
+                                                }" />
+                                        </template>
+                                    </div>
                                 </div>
+                                <button v-if="gridStyles.showControls" @click="showResetModal = true"
+                                    class="px-3 py-1 bg-green-600 rounded-lg hover:bg-green-500">
+                                    reset
+                                </button>
                             </div>
-                            <label class="inline-flex items-center">
-                                <input type="checkbox" v-model="mirrorLeft"
-                                    class="form-checkbox bg-green-800 border-green-700">
-                                <span class="ml-2 text-green-400">Mirror</span>
-                            </label>
-                            <!-- <button @click="rightDecoration = JSON.parse(JSON.stringify(leftDecoration)).map(row => [...row].reverse())"
-                                    class="px-3 py-1 bg-green-600 rounded-lg">mirror</button> -->
+                            <!-- Right Decoration -->
+                            <div class="space-y-2 flex flex-col items-center" v-if="!isMatrixMode">
+                                <label class="text-green-400 text-nowrap whitespace-nowrap">Right</label>
+                                <div class="flex flex-row flex-nowrap lg:items-center gap-2"
+                                    v-if="gridStyles.showControls">
+                                    <div class="flex flex-col items-center gap-2">
+                                        <button
+                                            @click="adjustDirection = 'left'; rightWidth = Math.max(-1, rightWidth - 1)"
+                                            class="px-3 py-1 bg-green-600 rounded-lg">-</button>
+                                        <button
+                                            @click="adjustDirection = 'left'; rightWidth = Math.min(100, rightWidth + 1)"
+                                            class="px-3 py-1 bg-green-600 rounded-lg">+</button>
+                                    </div>
+                                    <p class="px-1">{{ rightWidth }}</p>
+                                    <!-- Right side controls -->
+                                    <div class="flex flex-col items-center gap-2">
+                                        <button
+                                            @click="adjustDirection = 'right'; rightWidth = Math.max(-1, rightWidth - 1)"
+                                            class="px-3 py-1 bg-green-600 rounded-lg">-</button>
+                                        <button
+                                            @click="adjustDirection = 'right'; rightWidth = Math.min(100, rightWidth + 1)"
+                                            class="px-3 py-1 bg-green-600 rounded-lg">+</button>
+                                    </div>
+                                </div>
+                                <div class="bg-green-800 p-2 rounded w-max">
+                                    <div class="grid gap-1" :style="{
+                                        'grid-template-columns': `repeat(${rightWidth}, minmax(0, 1fr))`,
+                                        gap: `${gridStyles.cellGap}px`
+                                    }">
+                                        <template v-for="y in 10" :key="y">
+                                            <button v-for="x in rightWidth" :key="`${x}-${y}`"
+                                                @click="togglePixel('right', x - 1, y - 1)"
+                                                class="w-6 h-6 transition-colors" :class="{
+                                                    'border border-green-700': gridStyles.showBorders,
+                                                    'rounded': gridStyles.roundedCells,
+                                                    'bg-green-900': !rightDecoration[y - 1]?.[x - 1]?.active
+                                                }" :style="{
+                                                    backgroundColor: rightDecoration[y - 1]?.[x - 1]?.active ?
+                                                        rightDecoration[y - 1][x - 1].color : '',
+                                                    margin: `${gridStyles.cellGap}px`
+                                                }" />
+                                        </template>
+                                    </div>
+                                </div>
+                                <label class="inline-flex items-center" v-if="gridStyles.showControls">
+                                    <input type="checkbox" v-model="mirrorRight"
+                                        class="form-checkbox bg-green-800 border-green-700">
+                                    <span class="ml-2 text-green-400">Mirror</span>
+                                </label>
+                                <!-- <button @click="leftDecoration = JSON.parse(JSON.stringify(rightDecoration)).map(row => [...row].reverse())"
+                                class="px-3 py-1 bg-green-600 rounded-lg">mirror</button> -->
+                            </div>
                         </div>
-
-                        <!-- Middle Pattern -->
-                        <div class="space-y-2 flex flex-col items-center">
-                            <label class="text-green-400 text-nowrap whitespace-nowrap">Middle Pattern</label>
-                            <div class="flex items-center gap-2">
-                                <div class="flex flex-col items-center gap-2">
-                                    <button
-                                        @click="adjustDirection = 'left'; middleWidth = Math.max(-1, middleWidth - 1)"
-                                        class="px-3 py-1 bg-green-600 rounded-lg">-</button>
-                                    <button
-                                        @click="adjustDirection = 'left'; middleWidth = Math.min(100, middleWidth + 1)"
-                                        class="px-3 py-1 bg-green-600 rounded-lg">+</button>
-                                </div>
-
-                                <p class="px-4">{{ middleWidth }}</p>
-
-                                <!-- Right side controls -->
-                                <div class="flex flex-col items-center gap-2">
-                                    <button
-                                        @click="adjustDirection = 'right'; middleWidth = Math.max(-1, middleWidth - 1)"
-                                        class="px-3 py-1 bg-green-600 rounded-lg">-</button>
-                                    <button
-                                        @click="adjustDirection = 'right'; middleWidth = Math.min(100, middleWidth + 1)"
-                                        class="px-3 py-1 bg-green-600 rounded-lg">+</button>
-                                </div>
+                    </div>
+                    <!-- Grid Style Controls -->
+                    <div
+                        class="flex flex-col p-4 sm:flex-row sm:p-2 pt-6 sm:pt-6 gap-4 justify-center text-green-400 bg-green-800 rounded-lg relative -top-4 z-10 select-none">
+                        <label class="inline-flex items-center">
+                            <input type="checkbox" v-model="gridStyles.showControls"
+                                class="form-checkbox bg-green-800 border-green-700">
+                            <span class="ml-2">show controls</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="checkbox" v-model="gridStyles.roundedCells"
+                                class="form-checkbox bg-green-800 border-green-700">
+                            <span class="ml-2">Rounded Cells</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="checkbox" v-model="gridStyles.showBorders"
+                                class="form-checkbox bg-green-800 border-green-700">
+                            <span class="ml-2">Cell Borders</span>
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <span>Gap:</span>
+                            <div class="flex gap-1">
+                                <button v-for="(size, label) in { 'none': 0, 's': 1, 'm': 2, 'l': 4 }" :key="label"
+                                    @click="gridStyles.cellGap = size"
+                                    class="px-2 py-1 border rounded transition-colors" :class="gridStyles.cellGap === size
+                                        ? 'bg-green-600 border-green-500'
+                                        : 'bg-green-800 border-green-700 hover:bg-green-700'">
+                                    {{ label }}
+                                </button>
                             </div>
-                            <div class="bg-green-800 p-2 rounded w-max">
-                                <div class="grid gap-1"
-                                    :style="{ 'grid-template-columns': `repeat(${middleWidth}, minmax(0, 1fr))` }">
-                                    <template v-for="y in 10" :key="y">
-                                        <button v-for="x in middleWidth" :key="`${x}-${y}`"
-                                            @click="togglePixel('middle', x - 1, y - 1)"
-                                            class="w-6 h-6 border border-green-700 rounded transition-colors"
-                                            :class="middleDecoration[y - 1]?.[x - 1]?.active ? '' : 'bg-green-900'"
-                                            :style="middleDecoration[y - 1]?.[x - 1]?.active ?
-                                                { backgroundColor: middleDecoration[y - 1][x - 1].color } : {}" />
-                                    </template>
-                                </div>
-                            </div>
-                            <button @click="showResetModal = true"
-                                class="px-3 py-1 bg-green-600 rounded-lg hover:bg-green-500">
-                                reset
-                            </button>
-                        </div>
-
-                        <!-- Right Decoration -->
-                        <div class="space-y-2 flex flex-col items-center">
-                            <label class="text-green-400 text-nowrap whitespace-nowrap">Right Pattern</label>
-                            <div class="flex flex-row flex-nowrap lg:items-center gap-2">
-                                <div class="flex flex-col items-center gap-2">
-                                    <button @click="adjustDirection = 'left'; rightWidth = Math.max(-1, rightWidth - 1)"
-                                        class="px-3 py-1 bg-green-600 rounded-lg">-</button>
-                                    <button
-                                        @click="adjustDirection = 'left'; rightWidth = Math.min(100, rightWidth + 1)"
-                                        class="px-3 py-1 bg-green-600 rounded-lg">+</button>
-                                </div>
-
-                                <p class="px-4">{{ rightWidth }}</p>
-
-                                <!-- Right side controls -->
-                                <div class="flex flex-col items-center gap-2">
-                                    <button
-                                        @click="adjustDirection = 'right'; rightWidth = Math.max(-1, rightWidth - 1)"
-                                        class="px-3 py-1 bg-green-600 rounded-lg">-</button>
-                                    <button
-                                        @click="adjustDirection = 'right'; rightWidth = Math.min(100, rightWidth + 1)"
-                                        class="px-3 py-1 bg-green-600 rounded-lg">+</button>
-                                </div>
-                            </div>
-                            <div class="bg-green-800 p-2 rounded w-max">
-                                <div class="grid gap-1"
-                                    :style="{ 'grid-template-columns': `repeat(${rightWidth}, minmax(0, 1fr))` }">
-                                    <template v-for="y in 10" :key="y">
-                                        <button v-for="x in rightWidth" :key="`${x}-${y}`"
-                                            @click="togglePixel('right', x - 1, y - 1)"
-                                            class="w-6 h-6 border border-green-700 rounded transition-colors"
-                                            :class="rightDecoration[y - 1]?.[x - 1]?.active ? '' : 'bg-green-900'"
-                                            :style="rightDecoration[y - 1]?.[x - 1]?.active ?
-                                                { backgroundColor: rightDecoration[y - 1][x - 1].color } : {}" />
-                                    </template>
-                                </div>
-                            </div>
-                            <label class="inline-flex items-center">
-                                <input type="checkbox" v-model="mirrorRight"
-                                    class="form-checkbox bg-green-800 border-green-700">
-                                <span class="ml-2 text-green-400">Mirror</span>
-                            </label>
-                            <!-- <button @click="leftDecoration = JSON.parse(JSON.stringify(rightDecoration)).map(row => [...row].reverse())"
-                            class="px-3 py-1 bg-green-600 rounded-lg">mirror</button> -->
                         </div>
                     </div>
                 </div>
+
                 <!-- Preview Canvas -->
                 <div class="space-y-2">
                     <label class="text-green-400">preview</label>
@@ -309,7 +399,7 @@
                     <StyleGrid :text="text" :styles="styles" :selectedStyle="selectedStyle" @select="loadStyle" />
 
                     <div class="flex flex-col md:flex-row w-full gap-2 pt-6">
-                        <input v-model="newStyleName" placeholder="style name"
+                        <input v-model="newStyleName" placeholder="name"
                             class="bg-green-800 border flex-1 border-green-700 rounded-lg px-4 py-2 placeholder-green-700">
                         <input v-model="newStyleAuthor" placeholder="author"
                             class="bg-green-800 border flex-1 border-green-700 rounded-lg px-4 py-2 placeholder-green-700">
@@ -326,10 +416,12 @@
                         <textarea v-model="styleCode"
                             class="flex-1 bg-green-800 border border-green-700 rounded-lg px-4 py-2"></textarea>
                         <div class="flex flex-row sm:flex-col w-full sm:w-1/5 gap-2">
-                            <button @click="copyStyleCode" class="px-4 py-2 flex-1 bg-green-600 rounded-lg hover:bg-green-500">
+                            <button @click="copyStyleCode"
+                                class="px-4 py-2 flex-1 bg-green-600 rounded-lg hover:bg-green-500">
                                 copy
                             </button>
-                            <button @click="loadStyleCode" class="px-4 py-2 flex-1 bg-green-600 rounded-lg hover:bg-green-500">
+                            <button @click="loadStyleCode"
+                                class="px-4 py-2 flex-1 bg-green-600 rounded-lg hover:bg-green-500">
                                 load
                             </button>
                         </div>
@@ -453,9 +545,19 @@ const leftWidth = ref(3)
 const middleWidth = ref(1)
 const rightWidth = ref(3)
 
+const gridStyles = ref({
+    roundedCells: true,
+    showBorders: true,
+    cellGap: 2,
+    showControls: true
+})
+
 const isGradient = ref(false)
 const gradientDirection = ref('to bottom')
 const gradientColors = ref(['#ff8c00', '#ff0080'])
+
+const isMatrixMode = ref(false)
+const canvasHeight = ref(10) // Start with default 10
 
 const addGradientColor = () => {
     if (gradientColors.value.length < 5) {
@@ -501,6 +603,7 @@ const mirrorRight = ref(false)
 
 // Add to data/refs section
 const adjustDirection = ref('right') // 'left' or 'right'
+const adjustHeightDirection = ref('top')
 
 // Add new ref for text color
 // const textColor = ref('#4ade80')
@@ -605,9 +708,32 @@ const resetPatterns = () => {
 
 // Update generateGlyph function to apply decorations
 const generateGlyph = () => {
-    if (!canvas.value || !text.value) return
+    if (!canvas.value) return
 
+    if (!text.value) return
     const ctx = canvas.value.getContext('2d')
+
+    if (isMatrixMode.value) {
+        // Matrix mode - only render left decoration as a canvas
+        canvas.value.width = leftWidth.value
+        canvas.value.height = canvasHeight.value
+        realWidth.value = leftWidth.value
+        realHeight.value = canvasHeight.value
+
+        ctx.clearRect(0, 0, leftWidth.value, canvasHeight.value)
+
+        // Draw left decoration only
+        leftDecoration.value.forEach((row, y) => {
+            row.forEach((pixel, x) => {
+                if (pixel.active) {
+                    ctx.fillStyle = pixel.color
+                    ctx.fillRect(x, y, 1, 1)
+                }
+            })
+        })
+        return
+    }
+
     const spacing = Number(charSpacing.value)
     const font = fonts[selectedFont.value]
     const spaceCharWidth = Number(spaceWidth.value)
@@ -637,6 +763,8 @@ const generateGlyph = () => {
     // Draw middle pattern under text
     let x = leftTotalWidth
     while (x < leftTotalWidth + textWidth) {
+        // console.log(middleWidth.value)
+        if (middleWidth.value === 0) break
         middleDecoration.value.forEach((row, y) => {
             row.forEach((pixel, px) => {
                 if (pixel.active) {
@@ -866,30 +994,65 @@ const resizeDecorationArray = (currentArray, newWidth) => {
 }
 
 // Add helper function
-function resizeDecorationArrayDirectional(array, newWidth, direction) {
-    if (!array) return []
-    const currentWidth = array[0]?.length || 0
-    if (newWidth === currentWidth) return array
+const resizeDecorationArrayDirectional = (array, newSize, direction, isHeight = false) => {
+    if (!array) return array
 
-    return array.map(row => {
-        if (newWidth > currentWidth) {
-            const newCells = Array(newWidth - currentWidth).fill().map(() => ({
-                active: false,
-                color: '#4ade80'
-            }))
-            return direction === 'left'
-                ? [...newCells, ...row]
-                : [...row, ...newCells]
+    if (isHeight) {
+        // Handle height resizing
+        const currentHeight = array.length
+        const diff = newSize - currentHeight
+
+        if (diff === 0) return array
+
+        const newArray = [...array]
+
+        if (diff > 0) {
+            // Adding rows
+            const newRows = Array(diff).fill().map(() =>
+                Array(array[0].length).fill().map(() => ({
+                    active: false,
+                    color: '#4ade80'
+                }))
+            )
+
+            return direction === 'top'
+                ? [...newRows, ...newArray]
+                : [...newArray, ...newRows]
         } else {
-            return direction === 'left'
-                ? row.slice(currentWidth - newWidth)
-                : row.slice(0, newWidth)
+            // Removing rows
+            return direction === 'top'
+                ? newArray.slice(-newSize)
+                : newArray.slice(0, newSize)
         }
-    })
+    } else {
+        // Existing width resize logic
+        const currentWidth = array[0].length
+        const diff = newSize - currentWidth
+
+        if (diff === 0) return array
+
+        return array.map(row => {
+            if (diff > 0) {
+                const newCells = Array(diff).fill().map(() => ({
+                    active: false,
+                    color: '#4ade80'
+                }))
+                return direction === 'left'
+                    ? [...newCells, ...row]
+                    : [...row, ...newCells]
+            } else {
+                return direction === 'left'
+                    ? row.slice(-newSize)
+                    : row.slice(0, newSize)
+            }
+        })
+    }
 }
 
 // Update width watcher
 watch([leftWidth, middleWidth, rightWidth], ([newLeft, newMiddle, newRight]) => {
+    // console.log(newMiddle)
+    // return
     if (mirrorLeft.value) {
         rightWidth.value = newLeft
         newRight = newLeft
@@ -1100,4 +1263,33 @@ const loadStyleCode = async () => {
         console.error('Invalid style code')
     }
 }
+
+// Add height watcher
+watch(canvasHeight, (newHeight) => {
+    if (!isMatrixMode.value) return
+
+    leftDecoration.value = resizeDecorationArrayDirectional(
+        leftDecoration.value,
+        newHeight,
+        adjustHeightDirection.value,
+        true // isHeight flag to handle vertical resizing
+    )
+
+    generateGlyph()
+}, { immediate: true })
+
+watch(isMatrixMode, (newValue, oldValue) => {
+    if (!oldValue && newValue) {  // When switching TO matrix mode
+        // Check if leftDecoration has any active cells
+        const hasActiveCell = leftDecoration.value?.some(row =>
+            row.some(cell => cell.active)
+        )
+
+        // If no active cells, set to a more suitable matrix width
+        if (!hasActiveCell) {
+            leftWidth.value = 10  // or whatever default matrix width you prefer
+        }
+    }
+    generateGlyph()
+})
 </script>
