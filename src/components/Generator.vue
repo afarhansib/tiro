@@ -464,6 +464,9 @@
                 </div>
             </div>
         </div>
+        <div class="mt-6 text-center text-sm text-green-600">
+            <button @click="showClearModal = true">clear local storage</button>
+        </div>
     </div>
 
     <Modal :show="showResetModal" @close="showResetModal = false">
@@ -477,6 +480,22 @@
                 </button>
                 <button @click="resetPatterns" class="px-4 py-2 bg-red-900 text-red-400 hover:bg-red-800 rounded-lg">
                     Reset
+                </button>
+            </div>
+        </div>
+    </Modal>
+
+    <Modal :show="showClearModal" @close="showClearModal = false">
+        <div class="space-y-4">
+            <div class="text-green-400 font-medium">clear local storage</div>
+            <div class="text-green-500">are you sure? this will delete all saved state including your local styles. make sure you have copied somewhere.</div>
+            <div class="flex justify-end gap-3">
+                <button @click="showClearModal = false"
+                    class="px-4 py-2 text-green-400 hover:bg-green-800/50 rounded-lg">
+                    cancel
+                </button>
+                <button @click="clearSavedState" class="px-4 py-2 bg-red-900 text-red-400 hover:bg-red-800 rounded-lg">
+                    clear
                 </button>
             </div>
         </div>
@@ -526,9 +545,8 @@ import { styles as encodedStyles } from '../assets/styles'
 import StyleGrid from './StyleGrid.vue'
 import Modal from './Modal.vue'
 import { useToast } from '../composables/useToast'
-
-const showSubmitModal = ref(false)
-const isSubmitting = ref(false)
+import { encodeStyle, decodeStyle } from '../utils/style-encoder'
+import Panzoom from '@panzoom/panzoom'
 
 const submitStyle = async () => {
     showSubmitModal.value = true  // This opens the modal
@@ -581,54 +599,211 @@ const getDefaultText = () => {
     return defaults[Math.floor(Math.random() * defaults.length)]
 }
 
+// Initialize decoration data with proper structure
+const initDecorationData = (width) => {
+    return Array(10).fill().map(() =>
+        Array(width).fill().map(() => ({
+            active: false,
+            color: '#4ade80'
+        }))
+    )
+}
 
-import { encodeStyle, decodeStyle } from '../utils/style-encoder'
-
-import Panzoom from '@panzoom/panzoom'
-
+const showSubmitModal = ref(false)
+const isSubmitting = ref(false)
 const showResetModal = ref(false)
-
+const showClearModal = ref(false)
 const newStyleName = ref('')
 const newStyleAuthor = ref('')
 const selectedStyle = ref(null)
 const styleCode = ref('')
-
 const styleEncoder = ref('')
-
 const styles = ref(encodedStyles.map(encodedStyle => decodeStyle(encodedStyle)))
-// console.log(styles.value)
-// const styles = ref([])
-
 const text = ref(getDefaultText())
 const canvas = ref(null)
-// Replace font selection code
 const fontNames = Object.keys(fonts)
-const selectedFont = ref('cype') // Set default font by name
+const selectedFont = ref('cype')
 const canDownload = ref(false)
 const spaceWidth = ref(3)
 const charSpacing = ref(1)
-
 const realWidth = ref(0)
-const realHeight = ref(10) // Default height is 10px
-
-// Add decoration controls
+const realHeight = ref(10)
 const leftWidth = ref(3)
 const middleWidth = ref(1)
 const rightWidth = ref(3)
-
 const gridStyles = ref({
     roundedCells: true,
     showBorders: true,
     cellGap: 2,
     showControls: true
 })
-
 const isGradient = ref(false)
 const gradientDirection = ref('to bottom')
 const gradientColors = ref(['#ff8c00', '#ff0080'])
-
 const isMatrixMode = ref(false)
-const canvasHeight = ref(10) // Start with default 10
+const canvasHeight = ref(10)
+const leftDecoration = ref(initDecorationData(leftWidth.value))
+const middleDecoration = ref(initDecorationData(middleWidth.value))
+const rightDecoration = ref(initDecorationData(rightWidth.value))
+const mirrorLeft = ref(false)
+const mirrorRight = ref(false)
+const adjustDirection = ref('right')
+const adjustHeightDirection = ref('top')
+const textColor = ref('gradient/to bottom/#ff8c00/#ff0080')
+const colorMode = ref('decoration')
+const colors = ref([
+    '#4ade80', '#FFFFFF', '#808080', '#000000',  // Black, Gray, White
+
+    '#94a3b8', '#475569', '#1e293b', '#0f172a', // slate
+    '#d6d3d1', '#78716c', '#44403c', '#1c1917', // stone
+    '#fca5a5', '#ef4444', '#b91c1c', '#7f1d1d', // red
+    '#fde047', '#eab308', '#a16207', '#713f12', // yellow
+    '#86efac', '#22c55e', '#15803d', '#14532d', // green
+    '#93c5fd', '#3b82f6', '#1d4ed8', '#1e3a8a', // blue
+    '#d8b4fe', '#a855f7', '#7e22ce', '#581c87', // purple
+    '#f9a8d4', '#ec4899', '#be185d', '#831843', // pink
+])
+const activeColor = ref(colors.value[0])
+
+const STATE_KEY = 'tiroEditorState'
+
+// Function to save state to localStorage
+const saveToLocalStorage = () => {
+    try {
+        const state = {
+            showSubmitModal: showSubmitModal.value,
+            isSubmitting: isSubmitting.value,
+            showResetModal: showResetModal.value,
+            showClearModal: showClearModal.value,
+            newStyleName: newStyleName.value,
+            newStyleAuthor: newStyleAuthor.value,
+            selectedStyle: selectedStyle.value,
+            styleCode: styleCode.value,
+            styleEncoder: styleEncoder.value,
+            styles: styles.value,
+            text: text.value,
+            selectedFont: selectedFont.value,
+            canDownload: canDownload.value,
+            spaceWidth: spaceWidth.value,
+            charSpacing: charSpacing.value,
+            realWidth: realWidth.value,
+            realHeight: realHeight.value,
+            leftWidth: leftWidth.value,
+            middleWidth: middleWidth.value,
+            rightWidth: rightWidth.value,
+            gridStyles: gridStyles.value,
+            isGradient: isGradient.value,
+            gradientDirection: gradientDirection.value,
+            gradientColors: gradientColors.value,
+            isMatrixMode: isMatrixMode.value,
+            canvasHeight: canvasHeight.value,
+            leftDecoration: leftDecoration.value,
+            middleDecoration: middleDecoration.value,
+            rightDecoration: rightDecoration.value,
+            mirrorLeft: mirrorLeft.value,
+            mirrorRight: mirrorRight.value,
+            adjustDirection: adjustDirection.value,
+            adjustHeightDirection: adjustHeightDirection.value,
+            textColor: textColor.value,
+            colorMode: colorMode.value,
+            colors: colors.value,
+            activeColor: activeColor.value
+        }
+
+        localStorage.setItem(STATE_KEY, JSON.stringify(state))
+    } catch (error) {
+        console.error('Failed to save editor state:', error)
+    }
+}
+
+// Function to load state from localStorage
+const loadFromLocalStorage = () => {
+    try {
+        const savedState = localStorage.getItem(STATE_KEY)
+        if (savedState) {
+            const state = JSON.parse(savedState)
+
+            // Restore all values
+            showSubmitModal.value = state.showSubmitModal
+            isSubmitting.value = state.isSubmitting
+            showResetModal.value = state.showResetModal
+            showClearModal.value = state.showClearModal
+            newStyleName.value = state.newStyleName
+            newStyleAuthor.value = state.newStyleAuthor
+            selectedStyle.value = state.selectedStyle
+            styleCode.value = state.styleCode
+            styleEncoder.value = state.styleEncoder
+            styles.value = state.styles
+            text.value = state.text
+            selectedFont.value = state.selectedFont
+            canDownload.value = state.canDownload
+            spaceWidth.value = state.spaceWidth
+            charSpacing.value = state.charSpacing
+            realWidth.value = state.realWidth
+            realHeight.value = state.realHeight
+            leftWidth.value = state.leftWidth
+            middleWidth.value = state.middleWidth
+            rightWidth.value = state.rightWidth
+            gridStyles.value = state.gridStyles
+            isGradient.value = state.isGradient
+            gradientDirection.value = state.gradientDirection
+            gradientColors.value = state.gradientColors
+            isMatrixMode.value = state.isMatrixMode
+            canvasHeight.value = state.canvasHeight
+            leftDecoration.value = state.leftDecoration
+            middleDecoration.value = state.middleDecoration
+            rightDecoration.value = state.rightDecoration
+            mirrorLeft.value = state.mirrorLeft
+            mirrorRight.value = state.mirrorRight
+            adjustDirection.value = state.adjustDirection
+            adjustHeightDirection.value = state.adjustHeightDirection
+            textColor.value = state.textColor
+            colorMode.value = state.colorMode
+            colors.value = state.colors
+            activeColor.value = state.activeColor
+        }
+    } catch (error) {
+        console.error('Failed to load saved state:', error)
+    }
+}
+
+// Load saved state when component mounts
+onMounted(() => {
+    loadFromLocalStorage()
+})
+
+// Optional: Add a function to clear saved state
+const clearSavedState = () => {
+    try {
+        localStorage.removeItem(STATE_KEY)
+        window.location.reload()
+    } catch (error) {
+        console.error('Failed to clear saved state:', error)
+    }
+}
+
+// Watch for changes and save to localStorage
+watch(
+    [
+        showSubmitModal, isSubmitting, showResetModal,
+        newStyleName, newStyleAuthor, selectedStyle,
+        styleCode, styleEncoder, styles, text,
+        selectedFont, canDownload, spaceWidth,
+        charSpacing, realWidth, realHeight,
+        leftWidth, middleWidth, rightWidth,
+        gridStyles, isGradient, gradientDirection,
+        gradientColors, isMatrixMode, canvasHeight,
+        leftDecoration, middleDecoration, rightDecoration,
+        mirrorLeft, mirrorRight, adjustDirection,
+        adjustHeightDirection, textColor, colorMode,
+        colors, activeColor
+    ],
+    () => {
+        saveToLocalStorage()
+    },
+    { deep: true }
+)
+
 
 const addGradientColor = () => {
     if (gradientColors.value.length < 5) {
@@ -653,55 +828,6 @@ watch([isGradient, gradientDirection, gradientColors], () => {
         }
     }
 }, { deep: true })
-
-// Initialize decoration data with proper structure
-const initDecorationData = (width) => {
-    return Array(10).fill().map(() =>
-        Array(width).fill().map(() => ({
-            active: false,
-            color: '#4ade80'
-        }))
-    )
-}
-
-// Initialize decoration arrays
-const leftDecoration = ref(initDecorationData(leftWidth.value))
-const middleDecoration = ref(initDecorationData(middleWidth.value))
-const rightDecoration = ref(initDecorationData(rightWidth.value))
-
-const mirrorLeft = ref(false)
-const mirrorRight = ref(false)
-
-// Add to data/refs section
-const adjustDirection = ref('right') // 'left' or 'right'
-const adjustHeightDirection = ref('top')
-
-// Add new ref for text color
-// const textColor = ref('#4ade80')
-const textColor = ref('gradient/to bottom/#ff8c00/#ff0080')
-const colorMode = ref('decoration')
-
-// Add state tracking for original decorations
-const originalLeftDecoration = ref(null)
-const originalRightDecoration = ref(null)
-
-// Add color constants
-const colors = ref([
-    // Tiro default
-    // Basic Colors
-    '#4ade80', '#FFFFFF', '#808080', '#000000',  // Black, Gray, White
-
-    '#94a3b8', '#475569', '#1e293b', '#0f172a', // slate
-    '#d6d3d1', '#78716c', '#44403c', '#1c1917', // stone
-    '#fca5a5', '#ef4444', '#b91c1c', '#7f1d1d', // red
-    '#fde047', '#eab308', '#a16207', '#713f12', // yellow
-    '#86efac', '#22c55e', '#15803d', '#14532d', // green
-    '#93c5fd', '#3b82f6', '#1d4ed8', '#1e3a8a', // blue
-    '#d8b4fe', '#a855f7', '#7e22ce', '#581c87', // purple
-    '#f9a8d4', '#ec4899', '#be185d', '#831843', // pink
-])
-
-const activeColor = ref(colors.value[0])
 
 const addCustomColor = (color) => {
     if (!colors.value.includes(color)) {
@@ -1048,22 +1174,6 @@ watch([text, selectedFont, spaceWidth, charSpacing], () => {
     generateGlyph()
 })
 
-const resizeDecorationArray = (currentArray, newWidth) => {
-    return currentArray.map(row => {
-        const newRow = Array(newWidth).fill().map(() => ({
-            active: false,
-            color: '#4ade80'
-        }))
-        // Copy existing data
-        row.forEach((pixel, i) => {
-            if (i < newWidth) {
-                newRow[i] = { ...pixel }
-            }
-        })
-        return newRow
-    })
-}
-
 // Add helper function
 const resizeDecorationArrayDirectional = (array, newSize, direction, isHeight = false) => {
     if (!array) return array
@@ -1162,22 +1272,6 @@ watch([leftWidth, middleWidth, rightWidth], ([newLeft, newMiddle, newRight]) => 
     generateGlyph()
 }, { immediate: true })
 
-// Add functions to store/restore original states
-const storeOriginalState = (side) => {
-    if (side === 'left') {
-        originalLeftDecoration.value = JSON.parse(JSON.stringify(leftDecoration.value))
-    } else {
-        originalRightDecoration.value = JSON.parse(JSON.stringify(rightDecoration.value))
-    }
-}
-
-const restoreOriginalState = (side) => {
-    if (side === 'left') {
-        leftDecoration.value = JSON.parse(JSON.stringify(originalLeftDecoration.value))
-    }
-}
-
-
 // Handle mirror toggles
 watch(mirrorLeft, (newValue) => {
     if (newValue) {
@@ -1247,7 +1341,9 @@ const saveStyle = (name, author) => {
             rightWidth: rightWidth.value,
             mirrorLeft: mirrorLeft.value,
             mirrorRight: mirrorRight.value
-        }
+        },
+        verified: false,
+        isLocal: true
     }
 
     styles.value.push(newStyle)
@@ -1376,7 +1472,7 @@ const fetchStyles = async () => {
         const response = await fetch(apiUrl)
         const data = await response.json()
         if (data.styles) {
-            console.log(data.styles)
+            // console.log(data.styles)
             // Get set of existing IDs
             const existingIds = new Set(styles.value.map(style => style.id))
 

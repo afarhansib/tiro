@@ -30,7 +30,7 @@
                     ({{ styleDimensions.width }}x{{ styleDimensions.height }})
                 </span>
                 <span>
-                    <div v-if="!style.verified" class="px-2 py-0.5 rounded-md text-xs font-medium
+                    <div v-if="!style.verified && !style.isLocal" class="px-2 py-0.5 rounded-md text-xs font-medium
                 bg-gradient-to-r from-yellow-900/50 to-red-900/30
                 text-yellow-500 border border-yellow-700/20
                 flex items-center gap-1.5 shadow-sm">
@@ -40,6 +40,12 @@
                                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         unverified
+                    </div>
+                    <div v-if="style.isLocal" class="px-2 py-0.5 rounded-md text-xs font-medium
+                bg-gradient-to-r from-gray-700/50 to-slate-900/30
+                text-gray-300 border border-yellow-700/20
+                flex items-center gap-1.5 shadow-sm">
+                        local
                     </div>
                 </span>
             </div>
