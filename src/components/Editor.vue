@@ -42,6 +42,10 @@
                         class="px-4 py-2 rounded-lg bg-green-800 text-green-400 hover:bg-green-700 transition-colors">
                         Save Image
                     </button>
+                    <label class="text-green-400">item size:
+                        <input type="number" v-model="canvasSize" @change="updateCanvasSize" min="16" step="16"
+                            class="bg-green-800 border flex-1 border-green-700 rounded-lg px-4 py-2 placeholder-green-700" />
+                    </label>
                 </div>
             </div>
 
@@ -55,7 +59,7 @@
                         after:content-[''] after:absolute after:h-2 after:top-0 after:-right-4 after:w-4 after:rounded-tl-lg after:shadow-[-6px_0_0_0_rgb(22,101,52)] after:bg-transparent">
                         <span class="text-green-400">hex prefix: 0x{{ hexPrefix.replace('0x', '') }}</span>
                     </div>
-                    <input type="file" accept="image/*" class="hidden" @change="handleFileSelect" />
+                    <input type="file" accept="image/*" class="hidden" @change="handleFileUpload" />
                     <p class="text-green-400">
                         {{ filename || 'drop or click to upload image' }}
                     </p>
@@ -71,24 +75,26 @@
         </header>
 
         <main class="p-4 grid place-items-center">
-            <div v-if="imageGrid.length" class="max-w-full overflow-auto p-2">
-                <div class="inline-grid grid-cols-[repeat(16,_4rem)] gap-1">
-                    <div v-for="(cell, index) in imageGrid" :key="index"
-                        class="group relative w-16 h-16 bg-green-700 rounded overflow-hidden hover:ring-2 hover:ring-green-400 transition-all cursor-pointer"
-                        @click="handleCellClick(index)" @mousemove="handleMouseMove" @mouseenter="showTooltip = true"
-                        @mouseleave="showTooltip = false">
-                        <img v-if="cell.hasContent" :src="cell.dataUrl"
-                            class="w-full h-full object-cover group-hover:scale-105 transition-transform [image-rendering:pixelated]" />
-                        <div v-else class="w-full h-full grid place-items-center bg-green-800/50">
-                            <span class="text-green-400 text-xs select-none">empty</span>
+            <div id="panzoom">
+                <div v-if="imageGrid.length" class="max-w-full overflow-auto p-2">
+                    <div class="inline-grid grid-cols-[repeat(16,_4rem)] gap-1">
+                        <div v-for="(cell, index) in imageGrid" :key="index"
+                            class="group relative w-16 h-16 bg-green-700 rounded overflow-hidden hover:ring-2 hover:ring-green-400 transition-all cursor-pointer"
+                            @click="handleCellClick(index)" @mousemove="handleMouseMove"
+                            @mouseenter="showTooltip = true" @mouseleave="showTooltip = false">
+                            <img v-if="cell.hasContent" :src="cell.dataUrl"
+                                class="w-full h-full object-cover group-hover:scale-105 transition-transform [image-rendering:pixelated]" />
+                            <div v-else class="w-full h-full grid place-items-center bg-green-800/50">
+                                <span class="text-green-400 text-xs select-none">empty</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div v-else class="grid place-items-center h-[80vh]">
-                <div class="text-center">
-                    <h2 class="text-4xl font-bold mb-4">welcome to tiro</h2>
-                    <p class="text-green-400">create stunning in-game titles and text art</p>
+                <div v-else class="grid place-items-center h-[80vh]">
+                    <div class="text-center">
+                        <h2 class="text-4xl font-bold mb-4">welcome to tiro</h2>
+                        <p class="text-green-400">create stunning in-game titles and text art</p>
+                    </div>
                 </div>
             </div>
             <footer class="text-center mt-12 text-green-400/50 text-sm">
@@ -128,6 +134,7 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue'
+import Panzoom from '@panzoom/panzoom'
 
 const imageGrid = ref([])
 const filename = ref('')
@@ -148,23 +155,87 @@ const handleMouseMove = (event) => {
     tooltipY.value = event.clientY + 10
 }
 
+// When loading from localStorage
 onMounted(() => {
     const savedGrid = localStorage.getItem('tiroGrid')
     const savedFilename = localStorage.getItem('tiroFilename')
     const savedHexPrefix = localStorage.getItem('tiroHexPrefix')
     const savedMode = localStorage.getItem('tiroMode')
     const savedShowTooltips = localStorage.getItem('tiroShowTooltips')
+    const savedCanvasSize = localStorage.getItem('tiroCanvasSize')
 
     if (savedGrid) {
         imageGrid.value = JSON.parse(savedGrid)
         filename.value = savedFilename
-        hexPrefix.value = savedHexPrefix
+        hexPrefix.value = savedHexPrefix || '0xE0'
         mode.value = savedMode || 'replace'
+        canvasSize.value = parseInt(savedCanvasSize) || 32
+
+        // Create update function for the saved content
+        currentUpdateFunction = (newSize) => {
+            const promises = imageGrid.value.map((cell) => {
+                return new Promise((resolve) => {
+                    if (cell.hasContent) {
+                        const img = new Image()
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas')
+                            const ctx = canvas.getContext('2d')
+                            canvas.width = newSize
+                            canvas.height = newSize
+                            ctx.imageSmoothingEnabled = false
+
+                            // Calculate vertical centering offset
+                            const verticalOffset = (canvas.height - img.height) / 2
+
+                            // Draw original size without scaling, left aligned and vertically centered
+                            ctx.drawImage(
+                                img,
+                                0,              // Left aligned (x=0)
+                                verticalOffset, // Vertically centered
+                                img.width,      // Keep original width
+                                img.height      // Keep original height
+                            )
+
+                            resolve({
+                                dataUrl: canvas.toDataURL(),
+                                hasContent: cell.hasContent,
+                                width: newSize,
+                                height: newSize
+                            })
+                        }
+                        img.src = cell.dataUrl
+                    } else {
+                        resolve({
+                            dataUrl: cell.dataUrl,
+                            hasContent: false,
+                            width: newSize,
+                            height: newSize
+                        })
+                    }
+                })
+            })
+
+            Promise.all(promises).then(newGrid => {
+                imageGrid.value = newGrid
+                // Save the updated grid to localStorage
+                localStorage.setItem('tiroGrid', JSON.stringify(imageGrid.value))
+                localStorage.setItem('tiroCanvasSize', newSize.toString())
+            })
+        }
     }
 
     if (savedShowTooltips !== null) {
         showTooltips.value = JSON.parse(savedShowTooltips)
     }
+
+    const element = document.querySelector('#panzoom')
+    console.log(element)
+    const panzoom = Panzoom(element, {
+        canvas: true,
+        maxScale: 10,
+    })
+    const parent = element.parentElement
+    parent.addEventListener('wheel', panzoom.zoomWithWheel)
 })
 
 watch([imageGrid, filename, hexPrefix, mode, showTooltips],
@@ -206,70 +277,113 @@ const confirmDelete = () => {
     showDeleteModal.value = false
 }
 
-const processImage = (file) => {
+const canvasSize = ref(72)
+let currentUpdateFunction = null
+
+const handleFileUpload = (event) => {
+    const file = event.target.files[0]
+    if (file && file.type.startsWith('image/')) {
+        currentUpdateFunction = processImage(file, canvasSize.value)
+    }
+}
+
+// Update the updateCanvasSize function
+const updateCanvasSize = () => {
+    if (currentUpdateFunction) {
+        currentUpdateFunction(canvasSize.value)
+    }
+    // Save the new size to localStorage
+    localStorage.setItem('tiroCanvasSize', canvasSize.value.toString())
+}
+
+const processImage = (file, canvasSize = 32) => {
     filename.value = file.name
     const hexMatch = file.name.match(/[A-F0-9]{2}/i)
     hexPrefix.value = hexMatch ? `0x${hexMatch[0]}` : '0xE0'
     const reader = new FileReader()
+
+    const updateCanvas = (img, size) => {
+        const cellWidth = size
+        const cellHeight = size
+
+        // Calculate scaling to maintain original image size
+        const hRatio = (cellWidth * 16) / img.width
+        const vRatio = (cellHeight * 16) / img.height
+        const ratio = Math.min(hRatio, vRatio)
+
+        const gridCells = []
+
+        for (let y = 0; y < 16; y++) {
+            for (let x = 0; x < 16; x++) {
+                const cellCanvas = document.createElement('canvas')
+                cellCanvas.width = cellWidth
+                cellCanvas.height = cellHeight
+                const cellCtx = cellCanvas.getContext('2d')
+                cellCtx.imageSmoothingEnabled = false
+
+                // Calculate the source dimensions
+                const sourceX = (x * img.width) / 16
+                const sourceY = (y * img.height) / 16
+                const sourceWidth = img.width / 16
+                const sourceHeight = img.height / 16
+
+                // Calculate vertical centering offset
+                const verticalOffset = (cellHeight - sourceHeight) / 2
+
+                // Draw the portion of the original image
+                cellCtx.drawImage(
+                    img,
+                    sourceX,
+                    sourceY,
+                    sourceWidth,
+                    sourceHeight,
+                    0,                    // Left aligned (x=0)
+                    verticalOffset,       // Vertically centered
+                    sourceWidth,          // Keep original width
+                    sourceHeight          // Keep original height
+                )
+
+                // Check alpha values for empty tile detection
+                const imageData = cellCtx.getImageData(0, 0, cellWidth, cellHeight).data
+                let hasContent = false
+
+                for (let i = 3; i < imageData.length; i += 4) {
+                    if (imageData[i] > 0) {
+                        hasContent = true
+                        break
+                    }
+                }
+
+                gridCells.push({
+                    dataUrl: cellCanvas.toDataURL(),
+                    hasContent: hasContent,
+                    width: cellWidth,
+                    height: cellHeight
+                })
+            }
+        }
+
+        imageGrid.value = gridCells
+    }
+
     reader.onload = (e) => {
         const img = new Image()
         img.onload = () => {
-            const canvas = document.createElement('canvas')
-            const ctx = canvas.getContext('2d')
-
-            // Calculate cell dimensions based on image size
-            const cellWidth = Math.floor(img.width / 16)
-            const cellHeight = Math.floor(img.height / 16)
-
-            // Set canvas to match image dimensions
-            canvas.width = img.width
-            canvas.height = img.height
-            ctx.drawImage(img, 0, 0)
-
-            const gridCells = []
-
-            // Create exactly 16x16 grid using calculated cell dimensions
-            for (let y = 0; y < 16; y++) {
-                for (let x = 0; x < 16; x++) {
-                    const cellCanvas = document.createElement('canvas')
-                    cellCanvas.width = cellWidth
-                    cellCanvas.height = cellHeight
-                    const cellCtx = cellCanvas.getContext('2d')
-                    cellCtx.drawImage(
-                        canvas,
-                        x * cellWidth,
-                        y * cellHeight,
-                        cellWidth,
-                        cellHeight,
-                        0,
-                        0,
-                        cellWidth,
-                        cellHeight
-                    )
-
-                    // Check alpha values for empty tile detection
-                    const imageData = cellCtx.getImageData(0, 0, cellWidth, cellHeight).data
-                    let hasContent = false
-
-                    for (let i = 3; i < imageData.length; i += 4) {
-                        if (imageData[i] > 0) {
-                            hasContent = true
-                            break
-                        }
-                    }
-
-                    gridCells.push({
-                        dataUrl: cellCanvas.toDataURL(),
-                        hasContent: hasContent
-                    })
-                }
-            }
-
-            imageGrid.value = gridCells
+            updateCanvas(img, canvasSize)
         }
         img.src = e.target.result
     }
     reader.readAsDataURL(file)
+
+    return (newSize) => {
+        if (reader.result) {
+            const img = new Image()
+            img.onload = () => {
+                updateCanvas(img, newSize)
+            }
+            img.src = reader.result
+        }
+    }
 }
 
 
@@ -294,23 +408,27 @@ const handleTilePaste = (event) => {
         reader.onload = (e) => {
             const img = new Image()
             img.onload = () => {
-                const tileSize = 72 // Fixed tile size from 1152/16
-
                 const canvas = document.createElement('canvas')
                 const ctx = canvas.getContext('2d')
                 ctx.imageSmoothingEnabled = false
 
-                canvas.width = tileSize
-                canvas.height = tileSize
+                // Use the current canvas size instead of fixed size
+                canvas.width = canvasSize.value
+                canvas.height = canvasSize.value
 
-                // Left aligned (x=0) and vertically centered
-                const x = 0
-                const y = (tileSize - img.height) / 2
+                // Calculate vertical centering offset
+                const verticalOffset = (canvas.height - img.height) / 2
 
-                // Draw original size without scaling
-                ctx.drawImage(img, x, y)
+                // Draw original size without scaling, left aligned and vertically centered
+                ctx.drawImage(
+                    img,
+                    0,                  // Left aligned (x=0)
+                    verticalOffset,     // Vertically centered
+                    img.width,          // Keep original width
+                    img.height          // Keep original height
+                )
 
-                const imageData = ctx.getImageData(0, 0, tileSize, tileSize).data
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data
                 let hasContent = false
                 for (let i = 3; i < imageData.length; i += 4) {
                     if (imageData[i] > 0) {
@@ -321,7 +439,9 @@ const handleTilePaste = (event) => {
 
                 imageGrid.value[selectedPosition.value] = {
                     dataUrl: canvas.toDataURL(),
-                    hasContent: hasContent
+                    hasContent: hasContent,
+                    width: canvas.width,
+                    height: canvas.height
                 }
             }
             img.src = e.target.result
@@ -333,21 +453,32 @@ const handleTilePaste = (event) => {
 const saveImage = () => {
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')
-    canvas.width = 1152  // 72 * 16
-    canvas.height = 1152
+    canvas.width = canvasSize.value * 16
+    canvas.height = canvasSize.value * 16
 
     imageGrid.value.forEach((cell, index) => {
         if (cell.hasContent) {
-            const x = (index % 16) * 72
-            const y = Math.floor(index / 16) * 72
+            const x = (index % 16) * canvasSize.value
+            const y = Math.floor(index / 16) * canvasSize.value
             const img = new Image()
             img.src = cell.dataUrl
             ctx.drawImage(img, x, y)
         }
     })
 
+    // Enhanced filename handling
+    let exportName = filename.value || 'untitled'
+
+    // Remove file extension if present
+    exportName = exportName.replace(/\.[^/.]+$/, '')
+
+    // Add size and date information
+    const date = new Date()
+    const timestamp = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`
+    const finalFilename = `${exportName}_${canvasSize.value}x${canvasSize.value}_${timestamp}.png`
+
     const link = document.createElement('a')
-    link.download = filename.value || 'tiro-export.png'
+    link.download = finalFilename
     link.href = canvas.toDataURL()
     link.click()
 }
