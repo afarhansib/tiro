@@ -132,9 +132,7 @@
                                         ? 'border-white scale-110'
                                         : 'border-transparent hover:scale-105'
                                 ]" />
-                            <input type="color" :value="colorMode === 'text' ? textColor : activeColor"
-                                @change="e => addCustomColor(e.target.value)"
-                                class="w-8 h-8 rounded bg-transparent border-0 cursor-pointer">
+                            <div ref="colorPickr" class="w-8 h-8 rounded bg-transparent border-0 cursor-pointer"></div>
                         </div>
                     </div>
                 </div>
@@ -547,6 +545,8 @@ import Modal from './Modal.vue'
 import { useToast } from '../composables/useToast'
 import { encodeStyle, decodeStyle } from '../utils/style-encoder'
 import Panzoom from '@panzoom/panzoom'
+import Pickr from '@simonwep/pickr'
+import '@simonwep/pickr/dist/themes/classic.min.css'
 
 const submitStyle = async () => {
     showSubmitModal.value = true  // This opens the modal
@@ -770,6 +770,34 @@ const loadFromLocalStorage = () => {
 // Load saved state when component mounts
 onMounted(() => {
     loadFromLocalStorage()
+
+    // Initialize Pickr
+    const pickr = Pickr.create({
+        el: colorPickr.value,
+        theme: 'classic',
+        defaultRepresentation: 'HEX',
+        components: {
+            preview: true,
+            opacity: false,
+            hue: true,
+            interaction: {
+                hex: true,
+                rgba: true,
+                hsla: true,
+                hsva: true,
+                input: true,
+                clear: false,
+                save: true
+            }
+        }
+    })
+
+    // Handle color changes
+    pickr.on('save', (color) => {
+        const hexColor = color.toHEXA().toString()
+        addCustomColor(hexColor)
+        pickr.hide()
+    })
 })
 
 // Optional: Add a function to clear saved state
@@ -1511,5 +1539,8 @@ const submitStyleToServer = async (styleString) => {
         // You might want to add error handling UI here
     }
 }
+
+// Add colorPickr ref
+const colorPickr = ref(null)
 
 </script>
