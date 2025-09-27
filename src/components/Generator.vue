@@ -1496,6 +1496,7 @@ const apiUrl = 'https://tiro.yotbu.my.id/styles.php'  // Update with your actual
 // Check if decodeStyle is working correctly
 // Add API styles
 const fetchStyles = async () => {
+    return console.log('Backend is temporarily disabled 🙂‍↔️')
     try {
         const response = await fetch(apiUrl)
         const data = await response.json()
@@ -1521,6 +1522,7 @@ const fetchStyles = async () => {
 
 // Function to save style to API
 const submitStyleToServer = async (styleString) => {
+    return alert('Submission is temporarily disabled 🙂‍↔️')
     try {
         const response = await fetch(apiUrl, {
             method: 'POST',
