@@ -33,6 +33,14 @@
                     ]">
                         Delete Mode
                     </button>
+                    <button @click="mode = 'download'" :class="[
+                        'px-4 py-2 rounded-lg transition-colors',
+                        mode === 'download'
+                            ? 'bg-green-600 text-white'
+                            : 'bg-green-800 text-green-400'
+                    ]">
+                        Download Glyph
+                    </button>
                     <span class="text-green-400">|</span>
                     <router-link to="/generator"
                         class="px-4 py-2 rounded-lg bg-green-800 text-green-400 hover:bg-green-700 transition-colors">
@@ -118,6 +126,7 @@
         :class="{ 'opacity-0': !showTooltip, 'opacity-100': showTooltip }">
         {{ mode === 'replace' ? 'Click to replace' :
             mode === 'delete' ? 'Click to clear' :
+            mode === 'download' ? 'Click to download' :
                 'Click to copy' }}
     </div>
 
@@ -254,6 +263,59 @@ const handleCellClick = (index) => {
     } else if (mode.value === 'replace') {
         selectedPosition.value = index
         document.getElementById('tilePasteInput').click()
+    } else if (mode.value === 'download') {
+        // Download individual glyph as cropped image (right crop, 10px vertical, centered)
+        const cell = imageGrid.value[index]
+        if (cell && cell.hasContent) {
+            const scale = 10
+            const img = new Image()
+            img.onload = () => {
+                // Create a temp canvas to get pixel data
+                const tempCanvas = document.createElement('canvas')
+                tempCanvas.width = cell.width
+                tempCanvas.height = cell.height
+                const tempCtx = tempCanvas.getContext('2d')
+                tempCtx.imageSmoothingEnabled = false
+                tempCtx.drawImage(img, 0, 0)
+                const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height)
+                // Find rightmost non-transparent pixel
+                let rightCrop = 0
+                for (let x = tempCanvas.width - 1; x >= 0; x--) {
+                    for (let y = 0; y < tempCanvas.height; y++) {
+                        const alpha = imageData.data[(y * tempCanvas.width + x) * 4 + 3]
+                        if (alpha > 0) {
+                            rightCrop = x + 1
+                            break
+                        }
+                    }
+                    if (rightCrop) break
+                }
+                if (rightCrop === 0) rightCrop = 1 // fallback
+                // Vertically crop to 10px, centered
+                const cropHeight = 10
+                const cropY = Math.max(0, Math.floor((tempCanvas.height - cropHeight) / 2))
+                // Create final canvas
+                const finalCanvas = document.createElement('canvas')
+                finalCanvas.width = rightCrop * scale
+                finalCanvas.height = cropHeight * scale
+                const finalCtx = finalCanvas.getContext('2d')
+                finalCtx.imageSmoothingEnabled = false
+                finalCtx.drawImage(
+                    tempCanvas,
+                    0, cropY, rightCrop, cropHeight, // source
+                    0, 0, rightCrop * scale, cropHeight * scale // dest
+                )
+                // Filename: glyph_row_col_cropped.png
+                const row = Math.floor(index / 16)
+                const col = index % 16
+                const filename = `glyph_${row}_${col}_${rightCrop}x${cropHeight}_scaled.png`
+                const link = document.createElement('a')
+                link.download = filename
+                link.href = finalCanvas.toDataURL()
+                link.click()
+            }
+            img.src = cell.dataUrl
+        }
     } else {
         const row = Math.floor(index / 16)
         const col = index % 16
